@@ -97,14 +97,31 @@ declare global {
 function createDb() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL is not set");
+    throw new Error(
+      "DATABASE_URL is not set. Check the environment variable is added in " +
+        "Vercel (Project Settings > Environment Variables) for the environment " +
+        "you're deploying to, then redeploy."
+    );
   }
   const pool = new Pool({ connectionString, max: 5 });
   return new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
 }
 
-// Reuse a single pool across hot reloads in dev.
-export const db = globalThis.__db ?? createDb();
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__db = db;
+// Lazy singleton: the Pool/Kysely instance is only constructed on first
+// actual query, not at module import time. Next.js's build step imports
+// route modules (including this one, transitively) to collect page config
+// even for fully dynamic routes with no static data — eagerly connecting
+// here would make `next build` require a live DATABASE_URL, which it
+// shouldn't need. Reused across hot reloads in dev via a global.
+function getDb(): Kysely<Database> {
+  if (!globalThis.__db) {
+    globalThis.__db = createDb();
+  }
+  return globalThis.__db;
 }
+
+export const db = new Proxy({} as Kysely<Database>, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getDb(), prop, receiver);
+  },
+});
