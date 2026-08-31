@@ -120,8 +120,16 @@ function getDb(): Kysely<Database> {
   return globalThis.__db;
 }
 
+// Note: `receiver` must NOT be passed through to Reflect.get here. Kysely's
+// query builders use private (#) class fields internally; if a method is
+// invoked with `this` bound to this Proxy (which happens if receiver is the
+// proxy itself), V8 throws "Cannot read private member from an object whose
+// class did not declare it". Binding functions to the real instance avoids
+// that entirely.
 export const db = new Proxy({} as Kysely<Database>, {
-  get(_target, prop, receiver) {
-    return Reflect.get(getDb(), prop, receiver);
+  get(_target, prop) {
+    const real = getDb();
+    const value = Reflect.get(real, prop, real);
+    return typeof value === "function" ? value.bind(real) : value;
   },
 });
