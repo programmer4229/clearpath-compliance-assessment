@@ -11,9 +11,19 @@ export interface SavedFile {
 }
 
 export async function saveUpload(file: File): Promise<SavedFile> {
-  // TODO (pre-deploy): when BLOB_READ_WRITE_TOKEN is set, swap this branch to
-  // `@vercel/blob`'s put() instead of writing to local disk. Signature below
-  // stays the same either way, so nothing calling saveUpload() has to change.
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const { put } = await import("@vercel/blob");
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const blob = await put(`${randomUUID()}-${safeName}`, file, {
+      access: "public",
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    return { url: blob.url, filename: file.name };
+  }
+
+  // Local dev fallback (no Blob token set): write to disk. Vercel's
+  // production filesystem is read-only outside /tmp, so this branch only
+  // runs locally — BLOB_READ_WRITE_TOKEN is required in production.
   const uploadsDir = path.join(process.cwd(), "public", "uploads");
   await mkdir(uploadsDir, { recursive: true });
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
