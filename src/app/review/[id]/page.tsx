@@ -60,15 +60,23 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
                     className="max-h-96 rounded-lg border border-slate-200"
                   />
                 ) : (
-                  <a
-                    key={a.id}
-                    href={fileUrl(a.storage_url)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-indigo-600 hover:underline"
-                  >
-                    📄 {a.filename}
-                  </a>
+                  <div key={a.id} className="overflow-hidden rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
+                      <span className="truncate text-xs font-medium text-slate-600">📄 {a.filename}</span>
+                      <a
+                        href={fileUrl(a.storage_url)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 text-xs text-indigo-600 hover:underline"
+                      >
+                        Open in new tab
+                      </a>
+                    </div>
+                    {/* Some mobile browsers (notably iOS Safari) don't render
+                        PDFs inline in an iframe — the header link above is
+                        the fallback for those. */}
+                    <iframe src={fileUrl(a.storage_url)} title={a.filename} className="h-[600px] w-full" />
+                  </div>
                 )
               )}
             </div>
