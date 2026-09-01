@@ -33,7 +33,7 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
     (submission.status === "in_review" || submission.status === "resubmitted");
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-slate-900">{submission.title}</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -72,7 +72,7 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
                         href={fileUrl(a.storage_url)}
                         target="_blank"
                         rel="noreferrer"
-                        className="shrink-0 text-xs text-indigo-600 hover:underline"
+                        className="shrink-0 text-xs text-teal-600 hover:underline"
                       >
                         Open in new tab
                       </a>
@@ -118,16 +118,19 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
             <input type="hidden" name="submissionId" value={submission.id} />
 
             <div className="divide-y divide-slate-100">
-              {criteria.map((c) => {
+              {criteria.map((c, i) => {
                 const existing = responseByCriterion.get(c.id);
                 return (
-                  <div key={c.id} className="py-4 first:pt-0">
+                  <div
+                    key={c.id}
+                    className={`animate-fade-in-up stagger-${Math.min(i + 1, 5)} py-4 first:pt-0`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-sm font-medium text-slate-900">{c.title}</div>
                         <div className="mt-0.5 text-xs text-slate-500">{c.description}</div>
                         {c.regulation_reference && (
-                          <div className="mt-1 inline-block rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-600">
+                          <div className="mt-1 inline-block rounded bg-teal-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-teal-600">
                             {c.regulation_reference}
                           </div>
                         )}
@@ -136,7 +139,7 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
                         {RESULT_OPTIONS.map((opt) => (
                           <label
                             key={opt.value}
-                            className="flex cursor-pointer items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 has-checked:border-indigo-300 has-checked:bg-indigo-50 has-checked:text-indigo-700"
+                            className="flex cursor-pointer items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 transition-colors duration-150 has-checked:border-teal-300 has-checked:bg-teal-50 has-checked:text-teal-700"
                           >
                             <input
                               type="radio"
@@ -145,7 +148,7 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
                               defaultChecked={existing?.result === opt.value}
                               disabled={!isEditable}
                               required
-                              className="accent-indigo-600"
+                              className="accent-teal-600"
                             />
                             {opt.label}
                           </label>

@@ -83,7 +83,7 @@ export function AttachmentPicker({
       */}
       <label
         htmlFor={inputId}
-        className="mt-1 inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+        className="mt-1 inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
       >
         Choose files
       </label>

@@ -40,7 +40,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-slate-500">
         Need an account?{" "}
-        <Link href="/signup" className="font-medium text-indigo-600 hover:underline">
+        <Link href="/signup" className="font-medium text-teal-600 hover:underline">
           Create one
         </Link>
       </p>

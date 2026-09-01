@@ -34,7 +34,7 @@ export function SignupForm() {
             className={
               "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm " +
               (accountType === "employee"
-                ? "border-indigo-300 bg-indigo-50 text-indigo-800"
+                ? "border-teal-300 bg-teal-50 text-teal-800"
                 : "border-slate-300 text-slate-700 hover:bg-slate-50")
             }
           >
@@ -44,7 +44,7 @@ export function SignupForm() {
               value="employee"
               checked={accountType === "employee"}
               onChange={() => setAccountType("employee")}
-              className="accent-indigo-600"
+              className="accent-teal-600"
             />
             ClearPath employee
           </label>
@@ -52,7 +52,7 @@ export function SignupForm() {
             className={
               "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm " +
               (accountType === "affiliate"
-                ? "border-indigo-300 bg-indigo-50 text-indigo-800"
+                ? "border-teal-300 bg-teal-50 text-teal-800"
                 : "border-slate-300 text-slate-700 hover:bg-slate-50")
             }
           >
@@ -62,7 +62,7 @@ export function SignupForm() {
               value="affiliate"
               checked={accountType === "affiliate"}
               onChange={() => setAccountType("affiliate")}
-              className="accent-indigo-600"
+              className="accent-teal-600"
             />
             Affiliate partner
           </label>
@@ -79,7 +79,7 @@ export function SignupForm() {
               name="isMarketer"
               checked={isMarketer}
               onChange={(e) => setIsMarketer(e.target.checked)}
-              className="accent-indigo-600"
+              className="accent-teal-600"
             />
             In-house marketer — I submit content for review
           </label>
@@ -89,7 +89,7 @@ export function SignupForm() {
               name="isReviewer"
               checked={isReviewer}
               onChange={(e) => setIsReviewer(e.target.checked)}
-              className="accent-indigo-600"
+              className="accent-teal-600"
             />
             Compliance reviewer — I review submitted content
           </label>
@@ -158,7 +158,7 @@ export function SignupForm() {
 
       <p className="text-center text-sm text-slate-500">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-indigo-600 hover:underline">
+        <Link href="/login" className="font-medium text-teal-600 hover:underline">
           Log in
         </Link>
       </p>

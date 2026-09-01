@@ -33,7 +33,7 @@ export default async function StatusDetailPage({
   const canResubmit = latest.submission.status === "changes_requested";
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl animate-fade-in-up">
       {submitted && (
         <div className="banner-success mb-6">
           Submitted for review — you&apos;ll find it on your home page any time you&apos;re signed in.
@@ -57,11 +57,14 @@ export default async function StatusDetailPage({
 
       <div className="mt-8 space-y-6">
         {lineage.map((v, idx) => (
-          <div key={v!.submission.id} className="card p-5">
+          <div
+            key={v!.submission.id}
+            className={`card animate-fade-in-up stagger-${Math.min(idx + 1, 5)} p-5`}
+          >
             <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Version {idx + 1}
               {idx === lineage.length - 1 && (
-                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-600">
+                <span className="animate-pop-in rounded-full bg-teal-50 px-2 py-0.5 text-teal-600">
                   current
                 </span>
               )}
@@ -90,7 +93,7 @@ export default async function StatusDetailPage({
                           href={fileUrl(a.storage_url)}
                           target="_blank"
                           rel="noreferrer"
-                          className="shrink-0 text-xs text-indigo-600 hover:underline"
+                          className="shrink-0 text-xs text-teal-600 hover:underline"
                         >
                           Open in new tab
                         </a>
@@ -111,17 +114,20 @@ export default async function StatusDetailPage({
                   Compliance checklist notes
                 </h3>
                 <div className="mt-2 divide-y divide-slate-100">
-                  {v!.checklistResponses.map((r) => {
+                  {v!.checklistResponses.map((r, i) => {
                     const meta = CHECKLIST_RESULT_META[r.result];
                     return (
-                      <div key={r.criterion_id} className="py-2.5 first:pt-0">
+                      <div
+                        key={r.criterion_id}
+                        className={`animate-fade-in-up stagger-${Math.min(i + 1, 5)} py-2.5 first:pt-0`}
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="text-sm font-medium text-slate-900">{r.title}</div>
                             <div className="mt-0.5 text-xs text-slate-500">{r.description}</div>
                           </div>
                           <span
-                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${meta.className}`}
+                            className={`animate-pop-in shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${meta.className}`}
                           >
                             {meta.label}
                           </span>
@@ -170,7 +176,7 @@ export default async function StatusDetailPage({
       </div>
 
       {canResubmit && (
-        <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50/60 p-5">
+        <div className="animate-fade-in-up mt-8 rounded-xl border border-amber-200 bg-amber-50/60 p-5">
           <h2 className="text-sm font-semibold text-amber-900">Submit a revised version</h2>
           <p className="mt-1 text-xs text-amber-800">
             This goes back to the same reviewer who requested changes, not the general queue.

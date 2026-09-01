@@ -11,7 +11,7 @@ export default async function Home() {
   const mySubmissions = user.is_marketer ? await getMySubmissions(user.id) : [];
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <div className="mb-8 max-w-2xl">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
           Welcome back, {user.name.split(" ")[0]}
@@ -43,8 +43,11 @@ export default async function Home() {
                     </td>
                   </tr>
                 )}
-                {mySubmissions.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50/60">
+                {mySubmissions.map((s, i) => (
+                  <tr
+                    key={s.id}
+                    className={`animate-fade-in-up stagger-${Math.min(i + 1, 5)} transition-colors hover:bg-slate-50/60`}
+                  >
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {s.title}
                       <span className="ml-2 text-xs font-normal text-slate-400">v{s.version}</span>
@@ -53,7 +56,7 @@ export default async function Home() {
                       <StatusBadge status={s.status} />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/status/${s.id}`} className="text-xs text-indigo-600 hover:underline">
+                      <Link href={`/status/${s.id}`} className="text-xs text-teal-600 hover:underline">
                         View
                       </Link>
                     </td>
@@ -68,17 +71,17 @@ export default async function Home() {
       {user.is_reviewer && (
         <Link
           href="/review"
-          className="card group block max-w-md p-6 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+          className="card group block max-w-md p-6 transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md"
         >
           <div className="text-2xl">✅</div>
-          <div className="mt-3 text-xs font-semibold uppercase tracking-wide text-indigo-600">
+          <div className="mt-3 text-xs font-semibold uppercase tracking-wide text-teal-600">
             Compliance team
           </div>
           <div className="mt-1.5 text-lg font-semibold text-slate-900">Compliance review queue</div>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Claim submissions, review against marketing-compliance criteria, and issue decisions.
           </p>
-          <div className="mt-4 text-sm font-medium text-indigo-600 group-hover:underline">Go →</div>
+          <div className="mt-4 text-sm font-medium text-teal-600 group-hover:underline">Go →</div>
         </Link>
       )}
     </div>

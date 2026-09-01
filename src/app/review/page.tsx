@@ -25,7 +25,7 @@ export default async function ReviewQueuePage({
   const rows = showMine ? myQueue : allQueue;
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Compliance review queue</h1>
         <p className="mt-1 text-sm text-slate-600">
@@ -46,8 +46,8 @@ export default async function ReviewQueuePage({
           href="/review"
           className={
             !showMine
-              ? "rounded-full bg-slate-900 px-3 py-1 text-white"
-              : "rounded-full bg-white px-3 py-1 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+              ? "rounded-full bg-slate-900 px-3 py-1 text-white transition-colors duration-150"
+              : "rounded-full bg-white px-3 py-1 text-slate-600 ring-1 ring-slate-200 transition-colors duration-150 hover:bg-slate-50"
           }
         >
           All ({allQueue.length})
@@ -56,8 +56,8 @@ export default async function ReviewQueuePage({
           href="/review?view=mine"
           className={
             showMine
-              ? "rounded-full bg-slate-900 px-3 py-1 text-white"
-              : "rounded-full bg-white px-3 py-1 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+              ? "rounded-full bg-slate-900 px-3 py-1 text-white transition-colors duration-150"
+              : "rounded-full bg-white px-3 py-1 text-slate-600 ring-1 ring-slate-200 transition-colors duration-150 hover:bg-slate-50"
           }
         >
           My queue ({myQueue.length})
@@ -84,10 +84,13 @@ export default async function ReviewQueuePage({
                 </td>
               </tr>
             )}
-            {rows.map((s) => {
+            {rows.map((s, i) => {
               const isOwnSubmission = s.submitter_id === user.id;
               return (
-                <tr key={s.id} className="hover:bg-slate-50/60">
+                <tr
+                  key={s.id}
+                  className={`animate-fade-in-up stagger-${Math.min(i + 1, 5)} transition-colors hover:bg-slate-50/60`}
+                >
                   <td className="px-4 py-3 font-medium text-slate-900">
                     {s.title}
                     <span className="ml-2 text-xs font-normal text-slate-400">v{s.version}</span>
@@ -126,7 +129,7 @@ export default async function ReviewQueuePage({
                         Review
                       </Link>
                     ) : (
-                      <Link href={`/review/${s.id}`} className="text-xs text-indigo-600 hover:underline">
+                      <Link href={`/review/${s.id}`} className="text-xs text-teal-600 hover:underline">
                         View
                       </Link>
                     )}
