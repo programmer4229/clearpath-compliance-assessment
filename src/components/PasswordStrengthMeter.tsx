@@ -32,7 +32,6 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
 
   const score = scorePassword(password);
   const level = LEVELS[score] ?? LEVELS[LEVELS.length - 1]!;
-  const missing = CRITERIA.filter((c) => !c.test(password)).map((c) => c.label);
 
   return (
     <div className="mt-2 animate-fade-in-up">
@@ -46,17 +45,27 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
           </div>
         ))}
       </div>
-      <div className="mt-1.5 flex items-baseline justify-between gap-2 text-xs">
-        <span className={`font-medium transition-colors duration-200 ${level.textClassName}`}>
-          {level.label}
-        </span>
-        {missing.length > 0 && (
-          <span className="text-right text-slate-400">
-            Add {missing.slice(0, 2).join(" or ")}
-            {missing.length > 2 ? ", …" : ""}
-          </span>
-        )}
+      <div className={`mt-1.5 text-xs font-medium transition-colors duration-200 ${level.textClassName}`}>
+        {level.label}
       </div>
+      {/* Every criterion, always listed in full (never truncated) — wraps
+          onto as many lines as it needs rather than being clipped. */}
+      <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+        {CRITERIA.map((c) => {
+          const met = c.test(password);
+          return (
+            <li
+              key={c.label}
+              className={`flex items-center gap-1 text-xs transition-colors duration-200 ${
+                met ? "text-emerald-600" : "text-slate-400"
+              }`}
+            >
+              <span aria-hidden="true">{met ? "✓" : "○"}</span>
+              {c.label}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
