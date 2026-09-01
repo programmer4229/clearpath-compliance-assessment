@@ -1,10 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ProductType, SubmitterType, AccountType, ChecklistResult, DecisionType } from "@/lib/db";
+import { ProductType, AccountType, ChecklistResult, DecisionType } from "@/lib/db";
 import {
-  findOrCreateSubmitter,
   createSubmission,
   claimSubmission,
   submitDecision,
@@ -12,14 +10,12 @@ import {
   getSubmissionDetail,
 } from "@/lib/queries";
 import { sendNotification, decisionEmailCopy } from "@/lib/notify";
-import { REVIEWER_COOKIE } from "@/lib/reviewers";
 import { findUserByEmail, createUser } from "@/lib/users";
 import { hashPassword, verifyPassword } from "@/lib/auth";
-import { createSession, deleteSession } from "@/lib/session";
+import { createSession, deleteSession, verifySession } from "@/lib/session";
 import type { UploadedAttachment } from "@/lib/attachments";
 
 const VALID_PRODUCT_TYPES: ProductType[] = ["personal_loan", "credit_card", "mortgage_prequalification"];
-const VALID_SUBMITTER_TYPES: SubmitterType[] = ["in_house", "affiliate"];
 
 // Attachments are no longer sent as raw file bytes through the Server
 // Action — the browser uploads them directly to Vercel Blob (see
@@ -48,57 +44,59 @@ export async function createSubmissionAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const productType = String(formData.get("productType") ?? "");
   const bodyText = String(formData.get("bodyText") ?? "").trim();
-  const submitterType = String(formData.get("submitterType") ?? "");
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const affiliateCompany = String(formData.get("affiliateCompany") ?? "").trim();
-
   const attachments = parseAttachments(formData);
 
-  if (!title || !name || !email) throw new Error("Title, name, and email are required.");
+  // Submitter identity now comes from the session, not the form — see
+  // src/app/submit/page.tsx. Re-checked here (not just relied on via the
+  // page being behind proxy.ts) per the Data Access Layer pattern: this
+  // Server Function is reachable on its own regardless of what UI called it.
+  const user = await verifySession();
+  if (!user) redirect("/login");
+  if (!user.is_marketer) {
+    throw new Error("Your account isn't set up to submit content for review.");
+  }
+
+  if (!title) throw new Error("Title is required.");
   if (!VALID_PRODUCT_TYPES.includes(productType as ProductType)) throw new Error("Invalid product type.");
-  if (!VALID_SUBMITTER_TYPES.includes(submitterType as SubmitterType)) throw new Error("Invalid submitter type.");
   if (!bodyText && attachments.length === 0) {
     throw new Error("Include body text or at least one attachment.");
   }
-
-  const submitter = await findOrCreateSubmitter({
-    name,
-    email,
-    type: submitterType as SubmitterType,
-    affiliateCompany: submitterType === "affiliate" ? affiliateCompany || null : null,
-  });
 
   const submission = await createSubmission({
     title,
     productType: productType as ProductType,
     bodyText: bodyText || null,
-    submitterId: submitter.id,
+    submitterId: user.id,
     attachments,
   });
 
   redirect(`/status/${submission.id}?submitted=1`);
 }
 
-export async function setReviewerAction(formData: FormData) {
-  const reviewerId = String(formData.get("reviewerId") ?? "");
-  const store = await cookies();
-  if (reviewerId) {
-    store.set(REVIEWER_COOKIE, reviewerId, { path: "/", httpOnly: false });
-  } else {
-    store.delete(REVIEWER_COOKIE);
-  }
-  redirect("/review");
-}
-
 export async function claimAction(formData: FormData) {
   const submissionId = String(formData.get("submissionId") ?? "");
-  const reviewerId = String(formData.get("reviewerId") ?? "");
-  if (!submissionId || !reviewerId) throw new Error("Missing submission or reviewer.");
+  if (!submissionId) throw new Error("Missing submission.");
 
-  const claimed = await claimSubmission(submissionId, reviewerId);
+  // Reviewer identity comes from the session — there's no reviewer-picker
+  // to trust a form field from anymore (see src/app/review/page.tsx).
+  const user = await verifySession();
+  if (!user) redirect("/login");
+  if (!user.is_reviewer) {
+    throw new Error("Your account isn't set up to review submissions.");
+  }
+
+  const claimed = await claimSubmission(submissionId, user.id);
   if (claimed) {
     redirect(`/review/${submissionId}`);
+  }
+
+  // claimSubmission's WHERE clause is what actually enforces "can't claim
+  // your own submission" and "first click wins" — this just picks a more
+  // specific message for the former so it doesn't read like a race
+  // condition with another reviewer.
+  const detail = await getSubmissionDetail(submissionId);
+  if (detail?.submission.submitter_id === user.id) {
+    redirect("/review?claim_failed=self");
   }
   redirect("/review?claim_failed=1");
 }
@@ -107,16 +105,30 @@ const CRITERION_PREFIX = "criterion:";
 
 export async function decisionAction(formData: FormData) {
   const submissionId = String(formData.get("submissionId") ?? "");
-  const reviewerId = String(formData.get("reviewerId") ?? "");
   const decision = String(formData.get("decision") ?? "") as DecisionType;
   const feedback = String(formData.get("feedback") ?? "").trim() || null;
 
-  if (!submissionId || !reviewerId) throw new Error("Missing submission or reviewer.");
+  if (!submissionId) throw new Error("Missing submission.");
   if (!["approved", "changes_requested", "rejected"].includes(decision)) {
     throw new Error("Invalid decision.");
   }
   if (decision !== "approved" && !feedback) {
     throw new Error("Feedback is required when requesting changes or rejecting.");
+  }
+
+  const user = await verifySession();
+  if (!user) redirect("/login");
+  if (!user.is_reviewer) {
+    throw new Error("Your account isn't set up to review submissions.");
+  }
+
+  // The review page only renders the decision buttons when this submission
+  // is assigned to the signed-in user, but that's a UI restriction, not a
+  // security one — re-checked here since a Server Action is directly
+  // callable regardless of which page rendered the form that called it.
+  const existing = await getSubmissionDetail(submissionId);
+  if (!existing || existing.submission.assigned_reviewer_id !== user.id) {
+    throw new Error("This submission isn't assigned to you.");
   }
 
   const checklist: { criterionId: string; result: ChecklistResult; note: string | null }[] = [];
@@ -127,7 +139,13 @@ export async function decisionAction(formData: FormData) {
     checklist.push({ criterionId, result: value as ChecklistResult, note });
   }
 
-  const updated = await submitDecision({ submissionId, reviewerId, decision, feedback, checklist });
+  const updated = await submitDecision({
+    submissionId,
+    reviewerId: user.id,
+    decision,
+    feedback,
+    checklist,
+  });
 
   const detail = await getSubmissionDetail(submissionId);
   if (detail) {
@@ -153,6 +171,14 @@ export async function resubmitAction(formData: FormData) {
   if (!VALID_PRODUCT_TYPES.includes(productType as ProductType)) throw new Error("Invalid product type.");
 
   const attachments = parseAttachments(formData);
+
+  const user = await verifySession();
+  if (!user) redirect("/login");
+
+  const parent = await getSubmissionDetail(parentId);
+  if (!parent || parent.submission.submitter_id !== user.id) {
+    throw new Error("You can only resubmit your own submissions.");
+  }
 
   const next = await resubmitSubmission({
     parentId,

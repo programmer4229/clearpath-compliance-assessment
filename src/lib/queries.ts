@@ -1,33 +1,8 @@
-import { db, ChecklistResult, DecisionType, ProductType, SubmitterType } from "./db";
+import { db, ChecklistResult, DecisionType, ProductType } from "./db";
 import { sql } from "kysely";
 
 export function getChecklistCriteria() {
   return db.selectFrom("checklist_criteria").selectAll().orderBy("sort_order").execute();
-}
-
-export async function findOrCreateSubmitter(input: {
-  name: string;
-  email: string;
-  type: SubmitterType;
-  affiliateCompany?: string | null;
-}) {
-  const existing = await db
-    .selectFrom("submitters")
-    .selectAll()
-    .where("email", "=", input.email)
-    .executeTakeFirst();
-  if (existing) return existing;
-
-  return db
-    .insertInto("submitters")
-    .values({
-      name: input.name,
-      email: input.email,
-      type: input.type,
-      affiliate_company: input.affiliateCompany ?? null,
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
 }
 
 export async function createSubmission(input: {
@@ -69,11 +44,14 @@ export async function createSubmission(input: {
 
 // Queue listing: latest version of each submission "lineage" (a resubmission
 // supersedes its parent in the queue — reviewers work the newest version).
+// Includes s.submitter_id (unselected fields like this used to be implicit
+// via the join) so the review queue can tell a reviewer apart from their
+// own submissions and hide the Claim button — see src/app/review/page.tsx.
 export function getQueue() {
   return db
     .selectFrom("submissions as s")
-    .leftJoin("submitters as sub", "sub.id", "s.submitter_id")
-    .leftJoin("reviewers as r", "r.id", "s.assigned_reviewer_id")
+    .leftJoin("users as sub", "sub.id", "s.submitter_id")
+    .leftJoin("users as r", "r.id", "s.assigned_reviewer_id")
     .select([
       "s.id",
       "s.title",
@@ -82,9 +60,10 @@ export function getQueue() {
       "s.version",
       "s.created_at",
       "s.updated_at",
+      "s.submitter_id",
       "s.assigned_reviewer_id",
       "sub.name as submitter_name",
-      "sub.type as submitter_type",
+      "sub.account_type as submitter_account_type",
       "r.name as reviewer_name",
     ])
     .where((eb) =>
@@ -104,8 +83,8 @@ export function getQueue() {
 export async function getSubmissionDetail(id: string) {
   const submission = await db
     .selectFrom("submissions as s")
-    .leftJoin("submitters as sub", "sub.id", "s.submitter_id")
-    .leftJoin("reviewers as r", "r.id", "s.assigned_reviewer_id")
+    .leftJoin("users as sub", "sub.id", "s.submitter_id")
+    .leftJoin("users as r", "r.id", "s.assigned_reviewer_id")
     .select([
       "s.id",
       "s.title",
@@ -120,7 +99,7 @@ export async function getSubmissionDetail(id: string) {
       "s.updated_at",
       "sub.name as submitter_name",
       "sub.email as submitter_email",
-      "sub.type as submitter_type",
+      "sub.account_type as submitter_account_type",
       "sub.affiliate_company as affiliate_company",
       "r.name as reviewer_name",
     ])
@@ -147,7 +126,7 @@ export async function getSubmissionDetail(id: string) {
       .execute(),
     db
       .selectFrom("review_decisions as d")
-      .innerJoin("reviewers as r", "r.id", "d.reviewer_id")
+      .innerJoin("users as r", "r.id", "d.reviewer_id")
       .select(["d.decision", "d.feedback", "d.created_at", "r.name as reviewer_name"])
       .where("d.submission_id", "=", id)
       .orderBy("d.created_at", "asc")
@@ -186,12 +165,13 @@ export async function getSubmissionLineage(id: string) {
   return Promise.all(lineage.rows.map((r) => getSubmissionDetail(r.id)));
 }
 
-export function getSubmissionsBySubmitterEmail(email: string) {
+// The logged-in user's own submissions (latest version of each lineage) —
+// powers the "my submissions" dashboard on the home page.
+export function getMySubmissions(submitterId: string) {
   return db
     .selectFrom("submissions as s")
-    .innerJoin("submitters as sub", "sub.id", "s.submitter_id")
     .select(["s.id", "s.title", "s.status", "s.version", "s.parent_submission_id", "s.updated_at"])
-    .where("sub.email", "=", email)
+    .where("s.submitter_id", "=", submitterId)
     .where("s.id", "not in", (eb) =>
       eb
         .selectFrom("submissions as child")
@@ -203,12 +183,18 @@ export function getSubmissionsBySubmitterEmail(email: string) {
 }
 
 export async function claimSubmission(submissionId: string, reviewerId: string) {
-  // First click wins: only claim if still unclaimed.
+  // First click wins: only claim if still unclaimed. The submitter_id !=
+  // reviewerId condition is the actual enforcement of "can't review your
+  // own submission" — done atomically here (not as a separate check before
+  // this update) so there's no race between checking and claiming, and no
+  // way to bypass it by calling claimSubmission directly instead of going
+  // through the UI.
   const result = await db
     .updateTable("submissions")
     .set({ status: "in_review", assigned_reviewer_id: reviewerId, updated_at: new Date() })
     .where("id", "=", submissionId)
     .where("status", "=", "new")
+    .where("submitter_id", "!=", reviewerId)
     .executeTakeFirst();
   return Number(result.numUpdatedRows) > 0;
 }
@@ -221,6 +207,19 @@ export async function submitDecision(input: {
   checklist: { criterionId: string; result: ChecklistResult; note: string | null }[];
 }) {
   return db.transaction().execute(async (trx) => {
+    // Defense in depth alongside claimSubmission's atomic guard: a
+    // submission should never be assigned to its own submitter, but this
+    // makes sure a decision can't be recorded for one even if that
+    // invariant were ever violated some other way.
+    const submission = await trx
+      .selectFrom("submissions")
+      .select(["submitter_id"])
+      .where("id", "=", input.submissionId)
+      .executeTakeFirstOrThrow();
+    if (submission.submitter_id === input.reviewerId) {
+      throw new Error("You can't review your own submission.");
+    }
+
     for (const item of input.checklist) {
       await trx
         .insertInto("checklist_responses")

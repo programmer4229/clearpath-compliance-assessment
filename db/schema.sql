@@ -3,7 +3,6 @@
 
 create extension if not exists "pgcrypto";
 
-create type submitter_type as enum ('in_house', 'affiliate');
 create type product_type as enum ('personal_loan', 'credit_card', 'mortgage_prequalification');
 create type submission_status as enum (
   'new',                -- unclaimed, awaiting a reviewer
@@ -16,36 +15,17 @@ create type submission_status as enum (
 create type checklist_result as enum ('pass', 'fail', 'not_applicable');
 create type decision_type as enum ('approved', 'changes_requested', 'rejected');
 create type attachment_type as enum ('image', 'pdf');
-
-create table submitters (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  email text not null,
-  type submitter_type not null,
-  affiliate_company text,
-  created_at timestamptz not null default now()
-);
-create index on submitters (email);
-
-create table reviewers (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  email text not null unique,
-  created_at timestamptz not null default now()
-);
-
 create type account_type as enum ('employee', 'affiliate');
 
--- Authentication accounts — every person who can sign in to the portal.
--- Additive for now: submissions still reference the submitters/reviewers
--- tables above, unchanged, so the existing submit/review flows keep working
--- exactly as before while login is layered on top. Wiring submissions to
--- `users` directly (and retiring submitters/reviewers) is a follow-up.
+-- Authentication accounts — every person who can sign in to the portal, and
+-- the single identity source for both submitting and reviewing (see
+-- submissions/review_decisions below — this used to be two separate tables,
+-- submitters and reviewers, before login existed).
 --
 -- account_type distinguishes ClearPath employees from affiliate partners.
--- Employees additionally choose is_marketer / is_reviewer (at least one,
--- both allowed) at signup. Affiliates are always is_marketer = true,
--- is_reviewer = false — they submit content, they don't review it.
+-- Employees choose is_marketer / is_reviewer at signup (at least one, both
+-- allowed). Affiliates are always is_marketer = true, is_reviewer = false —
+-- they submit content, they don't review it.
 create table users (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -72,15 +52,16 @@ create table submissions (
   title text not null,
   product_type product_type not null,
   body_text text,
-  submitter_id uuid not null references submitters(id),
+  submitter_id uuid not null references users(id),
   status submission_status not null default 'new',
-  assigned_reviewer_id uuid references reviewers(id),
+  assigned_reviewer_id uuid references users(id),
   parent_submission_id uuid references submissions(id),
   version int not null default 1,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create index on submissions (status);
+create index on submissions (submitter_id);
 create index on submissions (assigned_reviewer_id);
 create index on submissions (parent_submission_id);
 
@@ -107,7 +88,7 @@ create table checklist_responses (
 create table review_decisions (
   id uuid primary key default gen_random_uuid(),
   submission_id uuid not null references submissions(id) on delete cascade,
-  reviewer_id uuid not null references reviewers(id),
+  reviewer_id uuid not null references users(id),
   decision decision_type not null,
   feedback text,
   created_at timestamptz not null default now()

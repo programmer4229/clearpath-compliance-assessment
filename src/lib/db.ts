@@ -1,7 +1,6 @@
 import { Pool } from "pg";
 import { Kysely, PostgresDialect, Generated } from "kysely";
 
-export type SubmitterType = "in_house" | "affiliate";
 export type ProductType = "personal_loan" | "credit_card" | "mortgage_prequalification";
 export type AccountType = "employee" | "affiliate";
 export type SubmissionStatus =
@@ -15,10 +14,11 @@ export type ChecklistResult = "pass" | "fail" | "not_applicable";
 export type DecisionType = "approved" | "changes_requested" | "rejected";
 export type AttachmentType = "image" | "pdf";
 
-// Authentication accounts. Additive alongside the existing submitters/
-// reviewers tables for now — those still back the submit/review flows as-is
-// (see src/lib/reviewers.ts). Wiring submissions to `users` directly, and
-// retiring submitters/reviewers, is a follow-up (see docs/PRD.md).
+// Authentication accounts — also the single identity source for both
+// submitting and reviewing (submissions.submitter_id / assigned_reviewer_id
+// and review_decisions.reviewer_id all reference this table; see
+// db/schema.sql). Used to be two separate tables, submitters and reviewers,
+// before login existed.
 export interface UsersTable {
   id: Generated<string>;
   name: string;
@@ -28,22 +28,6 @@ export interface UsersTable {
   affiliate_company: string | null;
   is_marketer: boolean;
   is_reviewer: boolean;
-  created_at: Generated<Date>;
-}
-
-export interface SubmittersTable {
-  id: Generated<string>;
-  name: string;
-  email: string;
-  type: SubmitterType;
-  affiliate_company: string | null;
-  created_at: Generated<Date>;
-}
-
-export interface ReviewersTable {
-  id: Generated<string>;
-  name: string;
-  email: string;
   created_at: Generated<Date>;
 }
 
@@ -98,8 +82,6 @@ export interface ReviewDecisionsTable {
 
 export interface Database {
   users: UsersTable;
-  submitters: SubmittersTable;
-  reviewers: ReviewersTable;
   checklist_criteria: ChecklistCriteriaTable;
   submissions: SubmissionsTable;
   attachments: AttachmentsTable;

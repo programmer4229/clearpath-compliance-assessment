@@ -1,10 +1,4 @@
--- Demo reviewers so the review-portal role switcher has something to pick from.
-insert into reviewers (name, email) values
-  ('Alex Chen', 'alex.chen@clearpath.example'),
-  ('Jordan Lee', 'jordan.lee@clearpath.example')
-on conflict (email) do nothing;
-
--- Demo login accounts for testing the auth system. All four use the
+-- Demo login accounts. All four use the
 -- password "password123" (hashed below with a fixed salt — fine for
 -- seed/demo data, never do this for real user passwords). One of each
 -- account shape the signup form can produce:
