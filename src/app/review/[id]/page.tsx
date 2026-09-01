@@ -1,9 +1,9 @@
-import { notFound } from "next/navigation";
-import { getCurrentReviewer } from "@/lib/reviewers";
+import { notFound, redirect } from "next/navigation";
 import { getSubmissionDetail, getChecklistCriteria } from "@/lib/queries";
 import { decisionAction } from "@/app/actions";
 import { PRODUCT_LABEL } from "@/lib/labels";
 import { fileUrl } from "@/lib/attachments";
+import { verifySession } from "@/lib/session";
 
 const RESULT_OPTIONS: { value: string; label: string }[] = [
   { value: "pass", label: "Pass" },
@@ -13,19 +13,23 @@ const RESULT_OPTIONS: { value: string; label: string }[] = [
 
 export default async function ReviewDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [reviewer, detail, criteria] = await Promise.all([
-    getCurrentReviewer(),
-    getSubmissionDetail(id),
-    getChecklistCriteria(),
-  ]);
+
+  const user = await verifySession();
+  if (!user) redirect("/login");
+  if (!user.is_reviewer) redirect("/");
+
+  const [detail, criteria] = await Promise.all([getSubmissionDetail(id), getChecklistCriteria()]);
   if (!detail) notFound();
 
   const { submission, attachments, checklistResponses, decisions } = detail;
   const responseByCriterion = new Map(checklistResponses.map((r) => [r.criterion_id, r]));
 
+  // submission.assigned_reviewer_id can never equal submission.submitter_id
+  // — claimSubmission's WHERE clause won't allow it — so this can't
+  // accidentally let someone edit their own submission; it's just the
+  // normal "assigned to you, and still open" check.
   const isEditable =
-    !!reviewer &&
-    submission.assigned_reviewer_id === reviewer.id &&
+    submission.assigned_reviewer_id === user.id &&
     (submission.status === "in_review" || submission.status === "resubmitted");
 
   return (
@@ -34,7 +38,8 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
         <h1 className="text-2xl font-semibold text-slate-900">{submission.title}</h1>
         <p className="mt-1 text-sm text-slate-500">
           {PRODUCT_LABEL[submission.product_type]} · v{submission.version} · submitted by{" "}
-          {submission.submitter_name} ({submission.submitter_type === "affiliate" ? "affiliate" : "in-house"})
+          {submission.submitter_name}{" "}
+          ({submission.submitter_account_type === "affiliate" ? "affiliate" : "in-house"})
           {submission.affiliate_company ? ` — ${submission.affiliate_company}` : ""}
         </p>
       </div>
@@ -105,13 +110,12 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
           <h2 className="text-sm font-semibold text-slate-900">Compliance checklist</h2>
           {!isEditable && (
             <p className="mt-1 text-xs text-amber-700">
-              Read-only — {reviewer ? "not assigned to you, or already decided." : "sign in as a reviewer to edit."}
+              Read-only — not assigned to you, or already decided.
             </p>
           )}
 
           <form action={decisionAction} className="mt-4 space-y-5">
             <input type="hidden" name="submissionId" value={submission.id} />
-            <input type="hidden" name="reviewerId" value={reviewer?.id ?? ""} />
 
             <div className="divide-y divide-slate-100">
               {criteria.map((c) => {
