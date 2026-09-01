@@ -14,6 +14,18 @@ const browser = await chromium.launch(launchOpts);
 const page = await browser.newPage();
 const log = (...a) => console.log(...a);
 
+// 0. The whole app now sits behind login (see src/proxy.ts) — everything
+// below this still uses the pre-auth submitter/reviewer identity mechanism
+// unchanged (a manually-typed name/email on /submit, a cookie-picked
+// reviewer on /review), so any seeded account works here; which one you're
+// logged in as doesn't yet affect the rest of the flow.
+await page.goto(`${BASE_URL}/login`);
+await page.fill('input[name=email]', 'marketer@clearpath.example');
+await page.fill('input[name=password]', 'password123');
+await page.click('button[type=submit]');
+await page.waitForURL(`${BASE_URL}/`, { timeout: 60000 });
+log('logged in');
+
 // 1. Submit as an affiliate with risky, compliance-flaggable copy
 await page.goto(`${BASE_URL}/submit`);
 await page.fill('input[name=name]', 'Jamie Rivera');
