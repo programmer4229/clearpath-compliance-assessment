@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSubmissionAction } from "@/app/actions";
-import { AttachmentsAndSubmit } from "@/components/AttachmentsAndSubmit";
+import { SubmissionFields } from "@/components/SubmissionFields";
 import { verifySession } from "@/lib/session";
 
 const PRODUCT_TYPES = [
@@ -39,39 +39,11 @@ export default async function SubmitPage() {
           </span>
         </div>
 
-        <fieldset className="card space-y-4 p-5">
-          <legend className="px-1 text-sm font-semibold text-slate-900">Content</legend>
-          <label className="field-label">
-            Title
-            <input
-              name="title"
-              required
-              placeholder="e.g. Spring personal loan email campaign"
-              className="input"
-            />
-          </label>
-          <label className="field-label">
-            Product type
-            <select name="productType" required className="input" defaultValue="">
-              <option value="" disabled>
-                Select a product
-              </option>
-              {PRODUCT_TYPES.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field-label">
-            Body text (paragraph, article, ad copy, etc.)
-            <textarea name="bodyText" rows={6} className="input" />
-          </label>
-        </fieldset>
-
-        <AttachmentsAndSubmit
-          fieldName="attachmentsJson"
-          label="Attachments (image or PDF)"
+        <SubmissionFields
+          productTypes={PRODUCT_TYPES}
+          attachmentFieldName="attachmentsJson"
+          attachmentLabel="Attachments"
+          attachmentHint="JPG, PNG, GIF, WEBP, or PDF — up to 25MB each"
           submitLabel="Submit for review"
         />
       </form>

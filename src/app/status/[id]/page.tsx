@@ -219,6 +219,7 @@ export default async function StatusDetailPage({
             <AttachmentsAndSubmit
               fieldName="attachmentsJson"
               label="Updated attachments (optional — replaces previous)"
+              hint="JPG, PNG, GIF, WEBP, or PDF — up to 25MB each"
               submitLabel="Submit revision"
             />
           </form>
