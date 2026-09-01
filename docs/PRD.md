@@ -16,14 +16,25 @@ ClearPath's compliance marketing team reviews and approves marketing content (fr
 
 - **Video submissions.** Deferred — raw video upload/storage/playback is a disproportionate engineering cost for the weakest part of the throughput story. Noted as future work.
 - **AI-assisted review/pre-screening.** Deferred until the submission/review workflow itself is solid. Noted as the next lever once this backbone exists (speeds up per-item review time, not just coordination).
-- **Real authentication.** Submitter/reviewer identity is captured via lightweight profile fields, not a login system. A role switcher stands in for reviewer auth. Real auth is a stretch goal only if time remains.
 
 ## Roles
 
+Every person signs up for one account (see `src/lib/session.ts`, `src/app/actions.ts` —
+`signupAction`/`loginAction`). Signup asks first whether the person is a **ClearPath
+employee** or an **affiliate partner**; employees then choose at least one of:
+
 | Role | Description |
 |---|---|
-| **Submitter** | In-house marketer or affiliate partner submitting content for approval. Identified by name, email, and submitter type (in-house / affiliate). |
+| **In-house marketer** | Submits content for approval. (Affiliate partners are always this role — they submit on behalf of their company and never review.) |
 | **Compliance Reviewer** | Reviews queued submissions, completes a checklist, and issues a decision. |
+
+An employee can hold both roles on one account. **A marketer+reviewer account must
+never be able to review its own submissions** — this has to be enforced server-side
+(not just hidden in the UI), since it's a real conflict-of-interest control, not a
+convenience. Wiring the review queue's reviewer identity, and the submit form's
+submitter identity, to the logged-in session (rather than the pre-auth manual-entry /
+cookie mechanism they still use today) — plus that self-review check — is tracked as
+follow-on work.
 
 ## Core Flows
 
@@ -83,5 +94,4 @@ Replaces generic "confidential / harmful" checks with criteria specific to consu
 
 - AI-assisted pre-screening: flag likely-risky passages against the checklist criteria above before human review, to cut per-item review time — advisory only, never auto-decides.
 - Video submissions (initially as hosted links, e.g. unlisted YouTube/TikTok, rather than raw upload).
-- Real authentication and role-based access control.
 - Reviewer workload balancing / auto-assignment.

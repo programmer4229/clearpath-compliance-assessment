@@ -7,7 +7,11 @@ are in [`docs/PRD.md`](docs/PRD.md).
 
 ## Stack
 
-- **Next.js 16** (App Router, Server Actions) + TypeScript + Tailwind
+- **Next.js 16** (App Router, Server Actions, Proxy) + TypeScript + Tailwind
+- **Auth**: stateless sessions — a signed, httpOnly cookie (see `src/lib/session.ts`),
+  passwords hashed with Node's built-in `scrypt` (see `src/lib/auth.ts`), route protection
+  via `src/proxy.ts`. Everyone signs up as either a ClearPath employee (choosing in-house
+  marketer / compliance reviewer / both) or an affiliate partner.
 - **Postgres** via `pg` + [Kysely](https://kysely.dev) (typed query builder) — not Prisma;
   see the note in `docs/PRD.md` / commit history for why
 - **Vercel Blob** for file storage — uploaded directly from the browser (`@vercel/blob/client`),
@@ -25,15 +29,19 @@ are in [`docs/PRD.md`](docs/PRD.md).
 2. Have a Postgres database reachable (local or hosted). Apply the schema:
    ```bash
    psql "$DATABASE_URL" -f db/schema.sql
-   psql "$DATABASE_URL" -f db/seed.sql   # seeds two demo reviewers
+   psql "$DATABASE_URL" -f db/seed.sql   # seeds demo reviewers + demo login accounts
    ```
-3. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (see comments in that
-   file for what each variable does and which are optional locally). To test file
-   attachments locally, also set `BLOB_READ_WRITE_TOKEN` — attachments upload straight to
-   Blob from the browser, so a token is needed even in dev; without one, the form still
-   works for text-only submissions and shows a clear inline error if you try to attach
-   a file.
-4. `npm run dev` → http://localhost:3000
+3. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` and `SESSION_SECRET`
+   (generate the latter with `openssl rand -base64 32` — see comments in that file for
+   what each variable does and which are optional locally). To test file attachments
+   locally, also set `BLOB_READ_WRITE_TOKEN` — attachments upload straight to Blob from
+   the browser, so a token is needed even in dev; without one, the form still works for
+   text-only submissions and shows a clear inline error if you try to attach a file.
+4. `npm run dev` → http://localhost:3000. The whole app sits behind login — sign up, or
+   use one of the seed accounts (password `password123` for all of them):
+   `marketer@clearpath.example` (in-house marketer), `reviewer@clearpath.example`
+   (compliance reviewer), `both@clearpath.example` (both roles),
+   `affiliate@partner.example` (affiliate partner).
 
 ## End-to-end smoke test
 
@@ -48,22 +56,34 @@ npm run dev            # in one terminal
 node scripts/e2e-smoke.mjs   # in another; requires `playwright` (npm i -D playwright)
 ```
 
+It logs in with a seed account first (the app requires auth for every page — see
+`src/proxy.ts`), then runs the same submit → claim → review → resubmit loop as before.
+
 ## Deploying
 
 1. Push this repo to GitHub, import it into Vercel (Next.js is auto-detected).
 2. In the Vercel project's **Storage** tab, create a Blob store and connect it to the
-   project — this auto-populates `BLOB_READ_WRITE_TOKEN`.
+   project — this auto-populates `BLOB_STORE_ID` and `BLOB_WEBHOOK_PUBLIC_KEY`.
 3. Set `DATABASE_URL` in the project's Environment Variables to your Supabase
    **Transaction pooler** connection string (port 6543) — pooled, so serverless
    functions don't exhaust Postgres's connection limit.
-4. Apply `db/schema.sql` and `db/seed.sql` to the Supabase database once, via its SQL
+4. Set `SESSION_SECRET` (generate with `openssl rand -base64 32`) — required, sessions
+   can't be created or verified without it.
+5. Apply `db/schema.sql` and `db/seed.sql` to the Supabase database once, via its SQL
    Editor (or `psql` from a network that can reach it).
-5. `RESEND_API_KEY` is optional — leave unset to keep the log-only fallback.
-6. Deploy.
+6. `RESEND_API_KEY` is optional — leave unset to keep the log-only fallback.
+7. Deploy.
 
 ## What's deliberately out of scope for this MVP
 
 See `docs/PRD.md` > Non-Goals: video submissions (planned as hosted links, not raw
-upload), AI-assisted compliance pre-screening (advisory-only triage layer, next
-logical step once this workflow backbone is solid), and real authentication (a
-role-switcher stands in for both submitter and reviewer identity).
+upload), and AI-assisted compliance pre-screening (advisory-only triage layer, next
+logical step once this workflow backbone is solid).
+
+Real authentication now exists (signup/login/sessions — see the Auth entry in Stack
+above), but the submit/review flows themselves still use the pre-auth identity
+mechanism unchanged for now: `/submit` collects the submitter's name/email directly on
+the form, and `/review` picks the reviewer identity from a cookie rather than the
+signed-in session. Wiring those to the logged-in user — plus role-based landing pages
+and preventing a marketer+reviewer from reviewing their own submission — is the next
+phase of this work; see `docs/PRD.md`.
