@@ -1,7 +1,11 @@
 import { Pool } from "pg";
 import { Kysely, PostgresDialect, Generated } from "kysely";
 
-export type ProductType = "personal_loan" | "credit_card" | "mortgage_prequalification";
+export type ProductType =
+  | "personal_loan"
+  | "credit_card"
+  | "mortgage_prequalification"
+  | "general_marketing";
 export type AccountType = "employee" | "affiliate";
 export type SubmissionStatus =
   | "new"

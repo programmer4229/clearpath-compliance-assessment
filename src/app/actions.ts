@@ -15,7 +15,12 @@ import { hashPassword, verifyPassword } from "@/lib/auth";
 import { createSession, deleteSession, verifySession } from "@/lib/session";
 import type { UploadedAttachment } from "@/lib/attachments";
 
-const VALID_PRODUCT_TYPES: ProductType[] = ["personal_loan", "credit_card", "mortgage_prequalification"];
+const VALID_PRODUCT_TYPES: ProductType[] = [
+  "personal_loan",
+  "credit_card",
+  "mortgage_prequalification",
+  "general_marketing",
+];
 
 // Attachments are no longer sent as raw file bytes through the Server
 // Action — the browser uploads them directly to Vercel Blob (see

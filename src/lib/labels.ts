@@ -13,6 +13,7 @@ export const PRODUCT_LABEL: Record<ProductType, string> = {
   personal_loan: "Personal Loan",
   credit_card: "Credit Card",
   mortgage_prequalification: "Mortgage Prequalification",
+  general_marketing: "General Marketing",
 };
 
 // Shared with the submitter-facing status page, which renders the same

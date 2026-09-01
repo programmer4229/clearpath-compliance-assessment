@@ -3,7 +3,9 @@
 
 create extension if not exists "pgcrypto";
 
-create type product_type as enum ('personal_loan', 'credit_card', 'mortgage_prequalification');
+create type product_type as enum (
+  'personal_loan', 'credit_card', 'mortgage_prequalification', 'general_marketing'
+);
 create type submission_status as enum (
   'new',                -- unclaimed, awaiting a reviewer
   'in_review',           -- claimed by a reviewer

@@ -7,6 +7,7 @@ const PRODUCT_TYPES = [
   { value: "personal_loan", label: "Personal Loan" },
   { value: "credit_card", label: "Credit Card" },
   { value: "mortgage_prequalification", label: "Mortgage Prequalification" },
+  { value: "general_marketing", label: "General Marketing" },
 ];
 
 export default async function SubmitPage() {

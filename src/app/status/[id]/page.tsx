@@ -200,9 +200,11 @@ export default async function StatusDetailPage({
                 required
                 className="input"
               >
-                <option value="personal_loan">Personal Loan</option>
-                <option value="credit_card">Credit Card</option>
-                <option value="mortgage_prequalification">Mortgage Prequalification</option>
+                {Object.entries(PRODUCT_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="field-label">
