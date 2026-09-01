@@ -77,6 +77,10 @@ scratch.
   - While video marketing has gotten increasing popular in the last few years, especially short form,
     it is not as common for banks therefore I decided to leave it as a feature to implement
     in the future if need rises.
+- Tutorial for Use + Excel Upload
+  - Tutorial would help onboard employees to this new software, Excel upload would ensure a seamless
+    transition from previous Excel system to this tool so the website could act as a single source of
+    truth throughout the transition process
 - Reviewer workload balancing instead of a flat first-click queue
 - Broader automated test coverage — there are two Playwright scripts covering the
   core loop and the self-review guard, not full unit/edge-case coverage.
