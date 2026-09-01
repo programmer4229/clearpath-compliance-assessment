@@ -6,20 +6,24 @@
 // route is that authenticated hop: it fetches the blob server-side with
 // get() and streams it back.
 //
-// "Authenticated" here matches this app's existing trust model rather than
-// inventing a new one: per the PRD this MVP has no real login system for
-// either reviewers or submitters (see docs/PRD.md > Non-Goals) — a
-// /status/[id] page is already only as protected as knowing its URL is. This
-// route holds attachments to that same bar: you need the exact blob URL
-// recorded against a real attachment (which only ever appears embedded in a
-// submission's own review/status pages), not a public guess. It is not
-// equivalent to per-user authorization, and a real deployment handling
-// actual regulated financial content would want one — noted here
-// deliberately rather than glossed over.
+// This route requires a signed-in session (checked below) — /api routes are
+// deliberately excluded from src/proxy.ts's matcher (see that file), so
+// that gate doesn't happen automatically the way it does for pages. Beyond
+// "logged in as someone," it still relies on the exact blob URL being
+// unguessable (URL-as-capability) rather than checking that the requester
+// actually owns or is assigned to the submission this attachment belongs
+// to — see docs/PRD.md > Roles for the wiring that would make that check
+// possible.
 import { type NextRequest, NextResponse } from "next/server";
 import { get } from "@vercel/blob";
+import { verifySession } from "@/lib/session";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const user = await verifySession();
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
   const url = request.nextUrl.searchParams.get("url");
   if (!url) {
     return NextResponse.json({ error: "Missing url" }, { status: 400 });

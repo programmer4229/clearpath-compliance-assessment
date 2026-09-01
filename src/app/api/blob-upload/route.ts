@@ -25,22 +25,26 @@ import { issueSignedToken } from "@vercel/blob";
 import { handleUploadPresigned, type HandleUploadPresignedBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 import { ALLOWED_ATTACHMENT_CONTENT_TYPES, MAX_ATTACHMENT_BYTES } from "@/lib/attachments";
+import { verifySession } from "@/lib/session";
 
 export async function POST(request: Request): Promise<NextResponse> {
+  // Vercel's own guidance is to authenticate/authorize the requester before
+  // handing out an upload token, since an unchecked route lets anyone
+  // upload into the store. /api routes are deliberately excluded from
+  // src/proxy.ts's matcher (redirecting a fetch() call to /login makes for
+  // a confusing failure, not a clean 401 — see that file), so this route
+  // checks the session itself instead.
+  const user = await verifySession();
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
   const body = (await request.json()) as HandleUploadPresignedBody;
 
   try {
     const jsonResponse = await handleUploadPresigned({
       body,
       request,
-      // Vercel's own guidance is to authenticate/authorize the requester
-      // here before handing out an upload token, since an unchecked route
-      // lets anyone upload into the store. This MVP deliberately has no
-      // login system at all (see docs/PRD.md > Non-Goals — a role-switcher
-      // stands in for identity), so there's no per-user session to check
-      // here either; content-type and size are the only gate. Flagging that
-      // explicitly rather than silently skipping it: a real deployment
-      // handling actual regulated content would add real auth first.
       getSignedToken: async (pathname) => ({
         token: await issueSignedToken({
           pathname,
