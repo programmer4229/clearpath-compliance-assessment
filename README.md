@@ -40,6 +40,15 @@ version history all follow from that.
   company's compliance officers before building.
 - Standard cloud infra (Vercel + hosted Postgres via Supabase) was fair game
 
+## The Solution At a High Level
+I created a marketing compliance review interface. An affiliate or a marketer at ClearPath
+can create a submission which includes the text for the marketing ad and optionally a pdf or image.
+Once they submit, the submission is added to a list where a compliance reviewer can claim it for review.
+Once claimed, the reviewer simply fills out the review form, going through different compliance-related
+questions and marking them as pass fail or n/a and optionally leaving a note. The reviewer submits this, either
+approving, rejecting, or requesting changes to the submission. The submitter can view the status of their submission
+on their end, see the reviewer's feedback, and resubmit if necessary. 
+
 ## How the solution addresses the bottleneck
 
 **No shared visibility →** submitters get a dashboard of their submissions and
