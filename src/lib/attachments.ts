@@ -29,3 +29,10 @@ export interface UploadedAttachment {
   url: string;
   filename: string;
 }
+
+// Attachments live in a Private Blob store, so their stored URL isn't
+// directly browsable — every <img>/<a> needs to go through the
+// authenticated proxy at /api/file instead. See that route for why.
+export function fileUrl(storageUrl: string): string {
+  return `/api/file?url=${encodeURIComponent(storageUrl)}`;
+}

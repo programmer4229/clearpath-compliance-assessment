@@ -22,6 +22,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     const jsonResponse = await handleUpload({
       body,
       request,
+      // Vercel's own guidance is to authenticate/authorize the requester
+      // here before handing out an upload token, since an unchecked route
+      // lets anyone upload into the store. This MVP deliberately has no
+      // login system at all (see docs/PRD.md > Non-Goals — a role-switcher
+      // stands in for identity), so there's no per-user session to check
+      // here either; content-type and size are the only gate. Flagging that
+      // explicitly rather than silently skipping it: a real deployment
+      // handling actual regulated content would add real auth first.
       onBeforeGenerateToken: async () => ({
         allowedContentTypes: [...ALLOWED_ATTACHMENT_CONTENT_TYPES],
         addRandomSuffix: true,

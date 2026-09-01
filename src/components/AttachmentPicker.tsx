@@ -10,6 +10,10 @@ import { attachmentTypeFor, type UploadedAttachment } from "@/lib/attachments";
 // hard-cap request bodies at 4.5MB, and that limit is enforced before app
 // code runs, so a large attachment sent the "normal" way fails silently.
 //
+// Uploaded with access: "private" to match this app's Blob store, which
+// means the returned URL isn't directly browsable — see src/lib/attachments.ts
+// (fileUrl helper) and src/app/api/file/route.ts for how it's read back.
+//
 // The uploaded file list is serialized into a hidden `name` field as JSON so
 // the surrounding <form action={someServerAction}> still submits it like any
 // other field — see src/lib/attachments.ts for the shape, and
@@ -42,7 +46,7 @@ export function AttachmentPicker({
         const type = attachmentTypeFor(file.type);
         if (!type) continue; // e.g. video — out of scope for this MVP, see PRD
         const blob = await upload(file.name, file, {
-          access: "public",
+          access: "private",
           handleUploadUrl: "/api/blob-upload",
         });
         uploaded.push({ type, url: blob.url, filename: file.name });

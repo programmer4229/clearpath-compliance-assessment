@@ -3,6 +3,7 @@ import { getCurrentReviewer } from "@/lib/reviewers";
 import { getSubmissionDetail, getChecklistCriteria } from "@/lib/queries";
 import { decisionAction } from "@/app/actions";
 import { PRODUCT_LABEL } from "@/lib/labels";
+import { fileUrl } from "@/lib/attachments";
 
 const RESULT_OPTIONS: { value: string; label: string }[] = [
   { value: "pass", label: "Pass" },
@@ -54,14 +55,14 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     key={a.id}
-                    src={a.storage_url}
+                    src={fileUrl(a.storage_url)}
                     alt={a.filename}
                     className="max-h-96 rounded-lg border border-slate-200"
                   />
                 ) : (
                   <a
                     key={a.id}
-                    href={a.storage_url}
+                    href={fileUrl(a.storage_url)}
                     target="_blank"
                     rel="noreferrer"
                     className="block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-indigo-600 hover:underline"

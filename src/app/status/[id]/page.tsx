@@ -4,6 +4,7 @@ import { resubmitAction } from "@/app/actions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PRODUCT_LABEL, STATUS_META } from "@/lib/labels";
 import { AttachmentsAndSubmit } from "@/components/AttachmentsAndSubmit";
+import { fileUrl } from "@/lib/attachments";
 
 export default async function StatusDetailPage({
   params,
@@ -66,7 +67,7 @@ export default async function StatusDetailPage({
                 {v!.attachments.map((a) => (
                   <a
                     key={a.id}
-                    href={a.storage_url}
+                    href={fileUrl(a.storage_url)}
                     target="_blank"
                     rel="noreferrer"
                     className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-indigo-600 hover:underline"
