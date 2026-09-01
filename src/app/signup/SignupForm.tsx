@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { signupAction, type AuthFormState } from "@/app/actions";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 
 const initialState: AuthFormState = {};
 
@@ -22,6 +23,19 @@ export function SignupForm() {
   const [affiliateCompany, setAffiliateCompany] = useState("");
   const [isMarketer, setIsMarketer] = useState(false);
   const [isReviewer, setIsReviewer] = useState(false);
+  // Not the actual field value (the password input stays uncontrolled on
+  // purpose — see the comment above) — just a mirror for the strength
+  // meter. Reset it whenever the action produces a new state object (i.e.
+  // right after a failed submit resets the form fields), so the meter
+  // doesn't keep showing a score for a field that's visually empty again.
+  // Adjusted during render (not an effect) — this is React's documented
+  // pattern for resetting state in response to a prop/value change.
+  const [password, setPassword] = useState("");
+  const [prevState, setPrevState] = useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    setPassword("");
+  }
 
   return (
     <form action={formAction} className="mt-6 space-y-5">
@@ -140,9 +154,17 @@ export function SignupForm() {
 
       <label className="field-label">
         Password
-        <input type="password" name="password" required minLength={8} className="input" />
+        <input
+          type="password"
+          name="password"
+          required
+          minLength={8}
+          className="input"
+          onChange={(e) => setPassword(e.target.value)}
+        />
         {state.errors?.password && <p className="mt-1 text-xs text-rose-600">{state.errors.password}</p>}
       </label>
+      <PasswordStrengthMeter password={password} />
 
       <label className="field-label">
         Confirm password
