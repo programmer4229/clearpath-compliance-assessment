@@ -72,18 +72,36 @@ export default async function StatusDetailPage({
             )}
 
             {v!.attachments.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {v!.attachments.map((a) => (
-                  <a
-                    key={a.id}
-                    href={fileUrl(a.storage_url)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-indigo-600 hover:underline"
-                  >
-                    {a.filename}
-                  </a>
-                ))}
+              <div className="mt-3 space-y-3">
+                {v!.attachments.map((a) =>
+                  a.type === "image" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={a.id}
+                      src={fileUrl(a.storage_url)}
+                      alt={a.filename}
+                      className="max-h-96 rounded-lg border border-slate-200"
+                    />
+                  ) : (
+                    <div key={a.id} className="overflow-hidden rounded-lg border border-slate-200">
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
+                        <span className="truncate text-xs font-medium text-slate-600">📄 {a.filename}</span>
+                        <a
+                          href={fileUrl(a.storage_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="shrink-0 text-xs text-indigo-600 hover:underline"
+                        >
+                          Open in new tab
+                        </a>
+                      </div>
+                      {/* Some mobile browsers (notably iOS Safari) don't render
+                          PDFs inline in an iframe — the header link above is
+                          the fallback for those. */}
+                      <iframe src={fileUrl(a.storage_url)} title={a.filename} className="h-[600px] w-full" />
+                    </div>
+                  )
+                )}
               </div>
             )}
 
