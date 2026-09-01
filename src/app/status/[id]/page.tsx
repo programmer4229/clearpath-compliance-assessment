@@ -1,10 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getSubmissionDetail, getSubmissionLineage } from "@/lib/queries";
 import { resubmitAction } from "@/app/actions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PRODUCT_LABEL, STATUS_META } from "@/lib/labels";
 import { AttachmentsAndSubmit } from "@/components/AttachmentsAndSubmit";
 import { fileUrl } from "@/lib/attachments";
+import { verifySession } from "@/lib/session";
 
 export default async function StatusDetailPage({
   params,
@@ -15,8 +16,17 @@ export default async function StatusDetailPage({
 }) {
   const { id } = await params;
   const { submitted, resubmitted } = await searchParams;
+
+  const user = await verifySession();
+  if (!user) redirect("/login");
+
   const detail = await getSubmissionDetail(id);
   if (!detail) notFound();
+  // Only the submitter who owns this submission can see its status page —
+  // now that submissions are tied to real accounts, there's no reason to
+  // keep the old "anyone with the URL" model. 404 rather than a "forbidden"
+  // message, so this doesn't confirm to a stranger that the ID is valid.
+  if (detail.submission.submitter_id !== user.id) notFound();
 
   const lineage = await getSubmissionLineage(id);
   const latest = lineage[lineage.length - 1]!;
@@ -26,8 +36,7 @@ export default async function StatusDetailPage({
     <div className="max-w-3xl">
       {submitted && (
         <div className="banner-success mb-6">
-          Submitted for review. Save this page&apos;s URL, or look it up later by email on the
-          Check Status page.
+          Submitted for review — you&apos;ll find it on your home page any time you&apos;re signed in.
         </div>
       )}
       {resubmitted && (
@@ -43,7 +52,7 @@ export default async function StatusDetailPage({
       <p className="mt-1 text-sm text-slate-500">
         {PRODUCT_LABEL[latest.submission.product_type]} · submitted by{" "}
         {latest.submission.submitter_name}
-        {latest.submission.submitter_type === "affiliate" ? " (affiliate)" : " (in-house)"}
+        {latest.submission.submitter_account_type === "affiliate" ? " (affiliate)" : " (in-house)"}
       </p>
 
       <div className="mt-8 space-y-6">
