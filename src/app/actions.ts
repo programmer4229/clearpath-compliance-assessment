@@ -176,6 +176,9 @@ export async function resubmitAction(formData: FormData) {
   if (!VALID_PRODUCT_TYPES.includes(productType as ProductType)) throw new Error("Invalid product type.");
 
   const attachments = parseAttachments(formData);
+  if (!bodyText && attachments.length === 0) {
+    throw new Error("Include body text or at least one attachment.");
+  }
 
   const user = await verifySession();
   if (!user) redirect("/login");
