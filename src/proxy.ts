@@ -37,6 +37,10 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Run on every page navigation except API routes (which authenticate
-  // themselves — see the comment above) and Next's own static/image assets.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // themselves — see the comment above), Next's own static/image assets,
+  // and the generated favicon/icon routes (src/app/{icon,apple-icon}.tsx,
+  // src/app/favicon.ico) — those need to load for a signed-out visitor too
+  // (e.g. on /login itself), and without this exclusion they'd 307 to
+  // /login instead of returning the image.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|icon|apple-icon).*)"],
 };
