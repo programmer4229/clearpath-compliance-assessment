@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { createSubmissionAction } from "@/app/actions";
 import { AttachmentsAndSubmit } from "@/components/AttachmentsAndSubmit";
+import { verifySession } from "@/lib/session";
 
 const PRODUCT_TYPES = [
   { value: "personal_loan", label: "Personal Loan" },
@@ -7,7 +9,13 @@ const PRODUCT_TYPES = [
   { value: "mortgage_prequalification", label: "Mortgage Prequalification" },
 ];
 
-export default function SubmitPage() {
+export default async function SubmitPage() {
+  const user = await verifySession();
+  if (!user) redirect("/login");
+  // Reviewer-only accounts have nothing to submit — send them to the
+  // dashboard instead of a form they can't use.
+  if (!user.is_marketer) redirect("/");
+
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-semibold text-slate-900">Submit marketing content</h1>
@@ -17,30 +25,19 @@ export default function SubmitPage() {
       </p>
 
       <form action={createSubmissionAction} className="mt-8 space-y-6">
-        <fieldset className="card space-y-4 p-5">
-          <legend className="px-1 text-sm font-semibold text-slate-900">Who&apos;s submitting</legend>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="field-label">
-              Your name
-              <input name="name" required className="input" />
-            </label>
-            <label className="field-label">
-              Your email
-              <input type="email" name="email" required className="input" />
-            </label>
-            <label className="field-label">
-              Submitter type
-              <select name="submitterType" required className="input" defaultValue="in_house">
-                <option value="in_house">In-house marketer</option>
-                <option value="affiliate">Affiliate partner</option>
-              </select>
-            </label>
-            <label className="field-label">
-              Affiliate company (if applicable)
-              <input name="affiliateCompany" className="input" />
-            </label>
-          </div>
-        </fieldset>
+        <div className="card flex items-center justify-between gap-3 p-4 text-sm">
+          <span className="text-slate-500">
+            Submitting as{" "}
+            <span className="font-medium text-slate-900">
+              {user.name} ({user.email})
+            </span>
+            {user.account_type === "affiliate" && (
+              <span className="ml-1.5 rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-700">
+                affiliate{user.affiliate_company ? ` — ${user.affiliate_company}` : ""}
+              </span>
+            )}
+          </span>
+        </div>
 
         <fieldset className="card space-y-4 p-5">
           <legend className="px-1 text-sm font-semibold text-slate-900">Content</legend>
