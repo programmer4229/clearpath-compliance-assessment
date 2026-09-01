@@ -16,10 +16,6 @@ export default async function Home() {
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
           Welcome back, {user.name.split(" ")[0]}
         </h1>
-        <p className="mt-2 text-slate-600">
-          Replaces the Excel-and-email review process with a structured queue, a real audit
-          trail, and compliance-specific review criteria.
-        </p>
       </div>
 
       {user.is_marketer && (

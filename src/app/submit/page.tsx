@@ -20,8 +20,7 @@ export default async function SubmitPage() {
     <div className="max-w-2xl">
       <h1 className="text-2xl font-semibold text-slate-900">Submit marketing content</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Text, image, and PDF are supported for this MVP. Video submissions are not yet supported —
-        see the PRD for the planned link-based approach.
+        Attach the text, image, or PDF version of the content. Video isn&apos;t supported yet.
       </p>
 
       <form action={createSubmissionAction} className="mt-8 space-y-6">
