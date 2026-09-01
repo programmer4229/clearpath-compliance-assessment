@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ProductType, SubmitterType, ChecklistResult, DecisionType } from "@/lib/db";
+import { ProductType, SubmitterType, AccountType, ChecklistResult, DecisionType } from "@/lib/db";
 import {
   findOrCreateSubmitter,
   createSubmission,
@@ -13,6 +13,9 @@ import {
 } from "@/lib/queries";
 import { sendNotification, decisionEmailCopy } from "@/lib/notify";
 import { REVIEWER_COOKIE } from "@/lib/reviewers";
+import { findUserByEmail, createUser } from "@/lib/users";
+import { hashPassword, verifyPassword } from "@/lib/auth";
+import { createSession, deleteSession } from "@/lib/session";
 import type { UploadedAttachment } from "@/lib/attachments";
 
 const VALID_PRODUCT_TYPES: ProductType[] = ["personal_loan", "credit_card", "mortgage_prequalification"];
@@ -160,4 +163,97 @@ export async function resubmitAction(formData: FormData) {
   });
 
   redirect(`/status/${next.id}?resubmitted=1`);
+}
+
+// --- Authentication ----------------------------------------------------
+// Shape returned by signupAction/loginAction for useActionState — errors
+// are field-scoped so the form can show them next to the relevant input,
+// per Next.js's authentication guide (avoids throwing for expected
+// validation failures, which would otherwise hit this app's generic
+// error boundary instead of a usable inline message).
+export interface AuthFormState {
+  errors?: Record<string, string>;
+  message?: string;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VALID_ACCOUNT_TYPES: AccountType[] = ["employee", "affiliate"];
+
+export async function signupAction(
+  _prevState: AuthFormState,
+  formData: FormData
+): Promise<AuthFormState> {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const accountType = String(formData.get("accountType") ?? "");
+  const affiliateCompany = String(formData.get("affiliateCompany") ?? "").trim();
+  const isMarketer = formData.get("isMarketer") === "on";
+  const isReviewer = formData.get("isReviewer") === "on";
+
+  const errors: Record<string, string> = {};
+  if (!name) errors.name = "Name is required.";
+  if (!email || !EMAIL_RE.test(email)) errors.email = "Enter a valid email address.";
+  if (password.length < 8) errors.password = "Password must be at least 8 characters.";
+  if (password && password !== confirmPassword) errors.confirmPassword = "Passwords don't match.";
+  if (!VALID_ACCOUNT_TYPES.includes(accountType as AccountType)) {
+    errors.accountType = "Select whether you're a ClearPath employee or an affiliate.";
+  }
+  if (accountType === "employee" && !isMarketer && !isReviewer) {
+    errors.role = "Select at least one: in-house marketer, compliance reviewer, or both.";
+  }
+
+  if (Object.keys(errors).length === 0) {
+    const existing = await findUserByEmail(email);
+    if (existing) errors.email = "An account with this email already exists.";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { errors, message: "Fix the errors below and try again." };
+  }
+
+  const passwordHash = await hashPassword(password);
+  const user = await createUser({
+    name,
+    email,
+    passwordHash,
+    accountType: accountType as AccountType,
+    // Affiliates aren't asked the marketer/reviewer question — they submit
+    // content on behalf of their company and never review it.
+    affiliateCompany: accountType === "affiliate" ? affiliateCompany || null : null,
+    isMarketer: accountType === "affiliate" ? true : isMarketer,
+    isReviewer: accountType === "affiliate" ? false : isReviewer,
+  });
+
+  await createSession(user.id);
+  redirect("/");
+}
+
+export async function loginAction(
+  _prevState: AuthFormState,
+  formData: FormData
+): Promise<AuthFormState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+
+  if (!email || !password) {
+    return { message: "Enter your email and password." };
+  }
+
+  const user = await findUserByEmail(email);
+  const valid = user ? await verifyPassword(password, user.password_hash) : false;
+  // Deliberately the same message either way — confirming which emails have
+  // an account is its own small information leak.
+  if (!user || !valid) {
+    return { message: "Invalid email or password." };
+  }
+
+  await createSession(user.id);
+  redirect("/");
+}
+
+export async function logoutAction() {
+  await deleteSession();
+  redirect("/login");
 }
