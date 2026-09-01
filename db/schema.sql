@@ -34,6 +34,31 @@ create table reviewers (
   created_at timestamptz not null default now()
 );
 
+create type account_type as enum ('employee', 'affiliate');
+
+-- Authentication accounts — every person who can sign in to the portal.
+-- Additive for now: submissions still reference the submitters/reviewers
+-- tables above, unchanged, so the existing submit/review flows keep working
+-- exactly as before while login is layered on top. Wiring submissions to
+-- `users` directly (and retiring submitters/reviewers) is a follow-up.
+--
+-- account_type distinguishes ClearPath employees from affiliate partners.
+-- Employees additionally choose is_marketer / is_reviewer (at least one,
+-- both allowed) at signup. Affiliates are always is_marketer = true,
+-- is_reviewer = false — they submit content, they don't review it.
+create table users (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text not null unique,
+  password_hash text not null,
+  account_type account_type not null,
+  affiliate_company text,
+  is_marketer boolean not null default false,
+  is_reviewer boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index on users (email);
+
 create table checklist_criteria (
   id text primary key,          -- short stable slug, e.g. 'apr_disclosure'
   sort_order int not null,

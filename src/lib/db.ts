@@ -3,6 +3,7 @@ import { Kysely, PostgresDialect, Generated } from "kysely";
 
 export type SubmitterType = "in_house" | "affiliate";
 export type ProductType = "personal_loan" | "credit_card" | "mortgage_prequalification";
+export type AccountType = "employee" | "affiliate";
 export type SubmissionStatus =
   | "new"
   | "in_review"
@@ -13,6 +14,22 @@ export type SubmissionStatus =
 export type ChecklistResult = "pass" | "fail" | "not_applicable";
 export type DecisionType = "approved" | "changes_requested" | "rejected";
 export type AttachmentType = "image" | "pdf";
+
+// Authentication accounts. Additive alongside the existing submitters/
+// reviewers tables for now — those still back the submit/review flows as-is
+// (see src/lib/reviewers.ts). Wiring submissions to `users` directly, and
+// retiring submitters/reviewers, is a follow-up (see docs/PRD.md).
+export interface UsersTable {
+  id: Generated<string>;
+  name: string;
+  email: string;
+  password_hash: string;
+  account_type: AccountType;
+  affiliate_company: string | null;
+  is_marketer: boolean;
+  is_reviewer: boolean;
+  created_at: Generated<Date>;
+}
 
 export interface SubmittersTable {
   id: Generated<string>;
@@ -80,6 +97,7 @@ export interface ReviewDecisionsTable {
 }
 
 export interface Database {
+  users: UsersTable;
   submitters: SubmittersTable;
   reviewers: ReviewersTable;
   checklist_criteria: ChecklistCriteriaTable;
