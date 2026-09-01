@@ -1,4 +1,5 @@
 import { createSubmissionAction } from "@/app/actions";
+import { AttachmentsAndSubmit } from "@/components/AttachmentsAndSubmit";
 
 const PRODUCT_TYPES = [
   { value: "personal_loan", label: "Personal Loan" },
@@ -69,21 +70,13 @@ export default function SubmitPage() {
             Body text (paragraph, article, ad copy, etc.)
             <textarea name="bodyText" rows={6} className="input" />
           </label>
-          <label className="field-label">
-            Attachments (image or PDF)
-            <input
-              type="file"
-              name="attachments"
-              accept="image/*,application/pdf"
-              multiple
-              className="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100"
-            />
-          </label>
         </fieldset>
 
-        <button type="submit" className="btn-primary">
-          Submit for review
-        </button>
+        <AttachmentsAndSubmit
+          fieldName="attachmentsJson"
+          label="Attachments (image or PDF)"
+          submitLabel="Submit for review"
+        />
       </form>
     </div>
   );

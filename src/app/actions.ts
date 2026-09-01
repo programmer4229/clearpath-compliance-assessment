@@ -11,23 +11,34 @@ import {
   resubmitSubmission,
   getSubmissionDetail,
 } from "@/lib/queries";
-import { saveUpload, attachmentTypeFor } from "@/lib/storage";
 import { sendNotification, decisionEmailCopy } from "@/lib/notify";
 import { REVIEWER_COOKIE } from "@/lib/reviewers";
+import type { UploadedAttachment } from "@/lib/attachments";
 
 const VALID_PRODUCT_TYPES: ProductType[] = ["personal_loan", "credit_card", "mortgage_prequalification"];
 const VALID_SUBMITTER_TYPES: SubmitterType[] = ["in_house", "affiliate"];
 
-async function collectAttachments(formData: FormData) {
-  const files = formData.getAll("attachments").filter((f): f is File => f instanceof File && f.size > 0);
-  const attachments: { type: "image" | "pdf"; url: string; filename: string }[] = [];
-  for (const file of files) {
-    const type = attachmentTypeFor(file);
-    if (!type) continue; // silently skip unsupported types (e.g. video, out of scope for this MVP)
-    const saved = await saveUpload(file);
-    attachments.push({ type, url: saved.url, filename: saved.filename });
+// Attachments are no longer sent as raw file bytes through the Server
+// Action — the browser uploads them directly to Vercel Blob (see
+// AttachmentPicker + /api/blob-upload) to stay under Vercel's 4.5MB request
+// body limit, and hands back a small JSON list of {type, url, filename}
+// through a hidden field instead. This just validates and parses that list.
+function parseAttachments(formData: FormData): UploadedAttachment[] {
+  const raw = String(formData.get("attachmentsJson") ?? "[]");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
   }
-  return attachments;
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter(
+    (a): a is UploadedAttachment =>
+      !!a &&
+      (a.type === "image" || a.type === "pdf") &&
+      typeof a.url === "string" &&
+      typeof a.filename === "string"
+  );
 }
 
 export async function createSubmissionAction(formData: FormData) {
@@ -39,10 +50,12 @@ export async function createSubmissionAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const affiliateCompany = String(formData.get("affiliateCompany") ?? "").trim();
 
+  const attachments = parseAttachments(formData);
+
   if (!title || !name || !email) throw new Error("Title, name, and email are required.");
   if (!VALID_PRODUCT_TYPES.includes(productType as ProductType)) throw new Error("Invalid product type.");
   if (!VALID_SUBMITTER_TYPES.includes(submitterType as SubmitterType)) throw new Error("Invalid submitter type.");
-  if (!bodyText && !(formData.getAll("attachments").some((f) => f instanceof File && f.size > 0))) {
+  if (!bodyText && attachments.length === 0) {
     throw new Error("Include body text or at least one attachment.");
   }
 
@@ -52,8 +65,6 @@ export async function createSubmissionAction(formData: FormData) {
     type: submitterType as SubmitterType,
     affiliateCompany: submitterType === "affiliate" ? affiliateCompany || null : null,
   });
-
-  const attachments = await collectAttachments(formData);
 
   const submission = await createSubmission({
     title,
@@ -138,7 +149,7 @@ export async function resubmitAction(formData: FormData) {
   if (!parentId || !title) throw new Error("Missing required fields.");
   if (!VALID_PRODUCT_TYPES.includes(productType as ProductType)) throw new Error("Invalid product type.");
 
-  const attachments = await collectAttachments(formData);
+  const attachments = parseAttachments(formData);
 
   const next = await resubmitSubmission({
     parentId,

@@ -3,6 +3,7 @@ import { getSubmissionDetail, getSubmissionLineage } from "@/lib/queries";
 import { resubmitAction } from "@/app/actions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PRODUCT_LABEL, STATUS_META } from "@/lib/labels";
+import { AttachmentsAndSubmit } from "@/components/AttachmentsAndSubmit";
 
 export default async function StatusDetailPage({
   params,
@@ -132,19 +133,11 @@ export default async function StatusDetailPage({
                 className="input"
               />
             </label>
-            <label className="field-label">
-              Updated attachments (optional — replaces previous)
-              <input
-                type="file"
-                name="attachments"
-                accept="image/*,application/pdf"
-                multiple
-                className="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-amber-700 hover:file:bg-amber-100"
-              />
-            </label>
-            <button type="submit" className="btn-primary">
-              Submit revision
-            </button>
+            <AttachmentsAndSubmit
+              fieldName="attachmentsJson"
+              label="Updated attachments (optional — replaces previous)"
+              submitLabel="Submit revision"
+            />
           </form>
         </div>
       )}

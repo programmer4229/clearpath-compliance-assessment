@@ -10,7 +10,11 @@ are in [`docs/PRD.md`](docs/PRD.md).
 - **Next.js 16** (App Router, Server Actions) + TypeScript + Tailwind
 - **Postgres** via `pg` + [Kysely](https://kysely.dev) (typed query builder) — not Prisma;
   see the note in `docs/PRD.md` / commit history for why
-- **Vercel Blob** for file storage in production (falls back to local disk in dev)
+- **Vercel Blob** for file storage — uploaded directly from the browser (`@vercel/blob/client`),
+  not proxied through a Server Action. Vercel Functions hard-cap request bodies at 4.5MB at
+  the platform level (before app code runs, so it fails silently — no application log line),
+  which a compliance PDF or a phone photo blows past easily. `/api/blob-upload` only brokers
+  short-lived upload tokens; see the comment at the top of that route for details.
 - **Resend** for email notifications (falls back to server-log "sends" when no API key
   is set, so the full decision flow is demoable without one)
 - Deployed on **Vercel**, database on **Supabase**
@@ -24,7 +28,11 @@ are in [`docs/PRD.md`](docs/PRD.md).
    psql "$DATABASE_URL" -f db/seed.sql   # seeds two demo reviewers
    ```
 3. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (see comments in that
-   file for what each variable does and which are optional locally).
+   file for what each variable does and which are optional locally). To test file
+   attachments locally, also set `BLOB_READ_WRITE_TOKEN` — attachments upload straight to
+   Blob from the browser, so a token is needed even in dev; without one, the form still
+   works for text-only submissions and shows a clear inline error if you try to attach
+   a file.
 4. `npm run dev` → http://localhost:3000
 
 ## End-to-end smoke test
