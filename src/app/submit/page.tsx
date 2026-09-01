@@ -21,7 +21,7 @@ export default async function SubmitPage() {
     <div className="max-w-2xl animate-fade-in-up">
       <h1 className="text-2xl font-semibold text-slate-900">Submit marketing content</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Attach the text, image, or PDF version of the content. Video isn&apos;t supported yet.
+        Attach the text, image, or PDF version of the content.
       </p>
 
       <form action={createSubmissionAction} className="mt-8 space-y-6">

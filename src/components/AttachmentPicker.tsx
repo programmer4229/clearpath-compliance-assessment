@@ -83,7 +83,7 @@ export function AttachmentPicker({
       */}
       <label
         htmlFor={inputId}
-        className="mt-1 inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
+        className="mt-2 inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
       >
         Choose files
       </label>
@@ -95,7 +95,7 @@ export function AttachmentPicker({
         onChange={handleChange}
         className="sr-only"
       />
-      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="mt-2.5 text-xs text-slate-500">{hint}</p>}
       {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
       {files.length > 0 && (
         <ul className="mt-2 space-y-1">
