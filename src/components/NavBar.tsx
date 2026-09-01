@@ -12,8 +12,11 @@ export function NavBar({ user }: { user: SessionUser | null }) {
   // review queue, and a reviewer-only account has nothing to submit — the
   // home page ("/") already adapts the same way (see src/app/page.tsx), so
   // the nav follows suit rather than linking to a page that would just
-  // redirect back.
+  // redirect back. Dashboard, unlike those two, is shown to any signed-in
+  // user regardless of role — it's the same destination as the logo, just
+  // named explicitly so it doesn't rely on people knowing that convention.
   const links = [
+    ...(user ? [{ href: "/", label: "Dashboard" }] : []),
     ...(user?.is_marketer ? [{ href: "/submit", label: "Submit content" }] : []),
     ...(user?.is_reviewer ? [{ href: "/review", label: "Compliance review" }] : []),
   ];
