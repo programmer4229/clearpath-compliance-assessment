@@ -70,8 +70,22 @@ export function AttachmentPicker({
 
   return (
     <div>
-      <label htmlFor={inputId} className="field-label">
-        {label}
+      <span className="field-label">{label}</span>
+      {/*
+        The native file input's own "No file chosen" text can't be styled or
+        removed while the input itself stays visible — and since selected
+        files are tracked in our own `files` list below (not the input's
+        value, which gets cleared after each pick so the same file can be
+        re-selected), that native text would always read "No file chosen"
+        even with files attached. Hide the native input and drive it from a
+        styled label instead; the list below is the single source of truth
+        for what's actually attached.
+      */}
+      <label
+        htmlFor={inputId}
+        className="mt-1 inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+      >
+        Choose files
       </label>
       <input
         id={inputId}
@@ -79,7 +93,7 @@ export function AttachmentPicker({
         accept="image/*,application/pdf"
         multiple
         onChange={handleChange}
-        className="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-50"
+        className="sr-only"
       />
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
       {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
