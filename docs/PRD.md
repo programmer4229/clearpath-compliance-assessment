@@ -28,21 +28,24 @@ employee** or an **affiliate partner**; employees then choose at least one of:
 | **In-house marketer** | Submits content for approval. (Affiliate partners are always this role — they submit on behalf of their company and never review.) |
 | **Compliance Reviewer** | Reviews queued submissions, completes a checklist, and issues a decision. |
 
-An employee can hold both roles on one account. **A marketer+reviewer account must
-never be able to review its own submissions** — this has to be enforced server-side
-(not just hidden in the UI), since it's a real conflict-of-interest control, not a
-convenience. Wiring the review queue's reviewer identity, and the submit form's
-submitter identity, to the logged-in session (rather than the pre-auth manual-entry /
-cookie mechanism they still use today) — plus that self-review check — is tracked as
-follow-on work.
+An employee can hold both roles on one account. **A marketer+reviewer account can never
+review its own submissions** — enforced server-side, atomically, in
+`claimSubmission()`'s WHERE clause (`src/lib/queries.ts`), not just hidden in the UI;
+see `scripts/e2e-self-review.mjs` for the regression test that calls that query directly
+and confirms it. Submitter and reviewer identity throughout the submit/review flows
+comes from the logged-in session (`verifySession()`) — there's no manual name/email
+entry or cookie-picked reviewer left anywhere in the app.
 
 ## Core Flows
 
+### 0. Home
+Landing page after login, adapted to the account's roles: a marketer or affiliate sees a table of their own submissions and status with a button to start a new one; a reviewer additionally (or only) sees a card into the review queue. See `src/app/page.tsx`.
+
 ### 1. Submission
-Submitter fills a form: title, product type (personal loan / credit card / mortgage prequalification), submitter type (in-house/affiliate), name, email, body text and/or image or PDF attachment(s). On submit, status = **New**. Submitter is shown a confirmation with their submission's tracking status page.
+Submitter fills a form: title, product type (personal loan / credit card / mortgage prequalification), body text and/or image or PDF attachment(s) — identity (name, email, account type, affiliate company) comes from the signed-in account, not re-entered. On submit, status = **New**. Submitter is shown a confirmation and their submission appears on their home dashboard.
 
 ### 2. Review Queue
-Reviewers land on a list of all submissions with status, product type, submitter type, and age. A separate "My Queue" view shows submissions they've claimed. Reviewers claim an unclaimed submission (first-click wins) to begin review; this prevents two reviewers duplicating work.
+Reviewers land on a list of all submissions with status, product type, submitter type, and age. A separate "My Queue" view shows submissions they've claimed. Reviewers claim an unclaimed submission (first-click wins) to begin review; this prevents two reviewers duplicating work. A reviewer's own submissions are visibly excluded from claiming (see Roles, above).
 
 ### 3. Review
 Clicking a submission opens a split view: submission content (text/images/PDF) on the left, a review form on the right. The form is a checklist of marketing-compliance criteria (below), each with Pass / Fail / N/A and a note field, plus an overall feedback field. The reviewer submits one of three decisions:
@@ -55,7 +58,7 @@ Clicking a submission opens a split view: submission content (text/images/PDF) o
 If changes are requested, the submitter edits and resubmits from their status page. The resubmission is linked to the original submission (version history), status becomes **Resubmitted**, and it routes directly back to the same reviewer's queue — not the general pool — so it's picked up with full context rather than re-read from scratch.
 
 ### 5. Status Visibility
-Submitters can look up their submission(s) by email and see live status, the reviewer's checklist feedback (on changes-requested/reject), and version history. Email notifications fire on every decision as a secondary channel, not the only one.
+A submitter's own submissions are always visible on their home dashboard; each links to a detail page with live status, the reviewer's checklist feedback (on changes-requested/reject), and version history. That detail page is restricted to the owning submitter — not the pre-login "anyone with the URL" model. Email notifications fire on every decision as a secondary channel, not the only one.
 
 ## Status Taxonomy
 
@@ -78,8 +81,8 @@ Replaces generic "confidential / harmful" checks with criteria specific to consu
 
 ## Data Model (high level)
 
-- **Submitter** — name, email, type (in-house/affiliate)
-- **Submission** — title, product type, body text, status, submitter, assigned reviewer, parent submission (for revisions), version number, timestamps
+- **User** — name, email, password hash, account type (employee/affiliate), affiliate company, is_marketer, is_reviewer — the one identity source for both submitting and reviewing
+- **Submission** — title, product type, body text, status, submitter (a User), assigned reviewer (a User), parent submission (for revisions), version number, timestamps
 - **Attachment** — submission id, file type (image/PDF), storage URL
 - **ChecklistResponse** — submission id, criterion id, result (pass/fail/n-a), note
 - **ReviewDecision** — submission id, reviewer, decision, feedback text, timestamp *(append-only — doubles as the audit trail)*

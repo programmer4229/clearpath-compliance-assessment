@@ -11,7 +11,10 @@ are in [`docs/PRD.md`](docs/PRD.md).
 - **Auth**: stateless sessions — a signed, httpOnly cookie (see `src/lib/session.ts`),
   passwords hashed with Node's built-in `scrypt` (see `src/lib/auth.ts`), route protection
   via `src/proxy.ts`. Everyone signs up as either a ClearPath employee (choosing in-house
-  marketer / compliance reviewer / both) or an affiliate partner.
+  marketer / compliance reviewer / both) or an affiliate partner, and submitter/reviewer
+  identity throughout the app comes from that account — no manual entry, no picking a
+  reviewer from a dropdown. An account with both roles can't claim or review its own
+  submissions; see `claimSubmission()` in `src/lib/queries.ts`.
 - **Postgres** via `pg` + [Kysely](https://kysely.dev) (typed query builder) — not Prisma;
   see the note in `docs/PRD.md` / commit history for why
 - **Vercel Blob** for file storage — uploaded directly from the browser (`@vercel/blob/client`),
@@ -29,7 +32,7 @@ are in [`docs/PRD.md`](docs/PRD.md).
 2. Have a Postgres database reachable (local or hosted). Apply the schema:
    ```bash
    psql "$DATABASE_URL" -f db/schema.sql
-   psql "$DATABASE_URL" -f db/seed.sql   # seeds demo reviewers + demo login accounts
+   psql "$DATABASE_URL" -f db/seed.sql   # seeds four demo login accounts
    ```
 3. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` and `SESSION_SECRET`
    (generate the latter with `openssl rand -base64 32` — see comments in that file for
@@ -46,18 +49,23 @@ are in [`docs/PRD.md`](docs/PRD.md).
 ## End-to-end smoke test
 
 `scripts/e2e-smoke.mjs` is a Playwright script that drives the full loop against a
-running instance: submit (as an affiliate, with deliberately non-compliant copy) →
-reviewer claims → checklist review fails a criterion → request changes → submitter sees
-feedback in-platform → resubmits → confirms it routes back to the *same* reviewer's
-queue rather than the general pool.
+running instance, logging in/out as different seed accounts along the way: submit (as
+the affiliate account, with deliberately non-compliant copy) → reviewer claims →
+checklist review fails a criterion → request changes → submitter sees feedback
+in-platform → resubmits → confirms it routes back to the *same* reviewer's queue rather
+than the general pool → confirms a marketer+reviewer account can't claim its own
+submission.
+
+`scripts/e2e-self-review.mjs` tests that last part again, more rigorously: it calls
+`claimSubmission()`'s exact SQL directly against Postgres with `reviewerId ===
+submitterId`, bypassing the app and its UI entirely, and confirms it's rejected. Needs
+`DATABASE_URL` set.
 
 ```bash
-npm run dev            # in one terminal
-node scripts/e2e-smoke.mjs   # in another; requires `playwright` (npm i -D playwright)
+npm run dev                        # in one terminal
+node scripts/e2e-smoke.mjs         # in another; requires `playwright` (npm i -D playwright)
+node scripts/e2e-self-review.mjs
 ```
-
-It logs in with a seed account first (the app requires auth for every page — see
-`src/proxy.ts`), then runs the same submit → claim → review → resubmit loop as before.
 
 ## Deploying
 
@@ -70,7 +78,10 @@ It logs in with a seed account first (the app requires auth for every page — s
 4. Set `SESSION_SECRET` (generate with `openssl rand -base64 32`) — required, sessions
    can't be created or verified without it.
 5. Apply `db/schema.sql` and `db/seed.sql` to the Supabase database once, via its SQL
-   Editor (or `psql` from a network that can reach it).
+   Editor (or `psql` from a network that can reach it). This schema evolved in a few
+   passes as auth was added — see git history and, if you're bringing an existing
+   deployment forward instead of starting fresh, the migration notes sent alongside each
+   pass rather than trying to replay `schema.sql` from scratch against a live database.
 6. `RESEND_API_KEY` is optional — leave unset to keep the log-only fallback.
 7. Deploy.
 
@@ -79,11 +90,3 @@ It logs in with a seed account first (the app requires auth for every page — s
 See `docs/PRD.md` > Non-Goals: video submissions (planned as hosted links, not raw
 upload), and AI-assisted compliance pre-screening (advisory-only triage layer, next
 logical step once this workflow backbone is solid).
-
-Real authentication now exists (signup/login/sessions — see the Auth entry in Stack
-above), but the submit/review flows themselves still use the pre-auth identity
-mechanism unchanged for now: `/submit` collects the submitter's name/email directly on
-the form, and `/review` picks the reviewer identity from a cookie rather than the
-signed-in session. Wiring those to the logged-in user — plus role-based landing pages
-and preventing a marketer+reviewer from reviewing their own submission — is the next
-phase of this work; see `docs/PRD.md`.
