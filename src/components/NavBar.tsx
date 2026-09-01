@@ -5,14 +5,18 @@ import { usePathname } from "next/navigation";
 import { logoutAction } from "@/app/actions";
 import type { SessionUser } from "@/lib/session";
 
-const LINKS = [
-  { href: "/submit", label: "Submit content" },
-  { href: "/status", label: "Check status" },
-  { href: "/review", label: "Compliance review" },
-];
-
 export function NavBar({ user }: { user: SessionUser | null }) {
   const pathname = usePathname();
+
+  // Role-conditional: a marketer-only/affiliate account has no use for the
+  // review queue, and a reviewer-only account has nothing to submit — the
+  // home page ("/") already adapts the same way (see src/app/page.tsx), so
+  // the nav follows suit rather than linking to a page that would just
+  // redirect back.
+  const links = [
+    ...(user?.is_marketer ? [{ href: "/submit", label: "Submit content" }] : []),
+    ...(user?.is_reviewer ? [{ href: "/review", label: "Compliance review" }] : []),
+  ];
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -27,7 +31,7 @@ export function NavBar({ user }: { user: SessionUser | null }) {
         {user ? (
           <div className="flex items-center gap-4">
             <nav className="flex gap-1 text-sm">
-              {LINKS.map((link) => {
+              {links.map((link) => {
                 const active = pathname === link.href || pathname?.startsWith(link.href + "/");
                 return (
                   <Link
