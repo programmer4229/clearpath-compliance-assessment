@@ -57,7 +57,7 @@ its parent, routed straight back to the same reviewer, so nobody re-reviews from
 scratch.
 
 
-## What we'd build next
+## What I'd build next
 
 - AI-assisted pre-screening against the checklist (advisory only, never
   auto-decides)
@@ -66,9 +66,16 @@ scratch.
     put the company is serious legal trouble. I felt it was more important to solve
     the bottlenecks addressed above concretely than spend time implementing a
     feature that could do more harm than good.
+- Email when submission is reviewed
+  - This is basically already implemented, I planned to implement with Resend API but
+    did not because I was not able to set it up with the vercel domain and it seemed out
+    of scope to create a whole domain and email address for this assessment. Easy next step
+    were I to actually deploy this project as an actual product, the email message is already
+    logged when a submission is reviewed, would just need to connect to Resend API
+    in order to send the actual email.
 - Native video submission support
-  - While video marketing has gotten increasing popular in the last few years, it
-    is not as common for banks therefore I decided to leave it as a feature to implement
+  - While video marketing has gotten increasing popular in the last few years, especially short form,
+    it is not as common for banks therefore I decided to leave it as a feature to implement
     in the future if need rises.
 - Reviewer workload balancing instead of a flat first-click queue
 - Broader automated test coverage — there are two Playwright scripts covering the
