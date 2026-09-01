@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSubmissionDetail, getSubmissionLineage } from "@/lib/queries";
 import { resubmitAction } from "@/app/actions";
 import { StatusBadge } from "@/components/StatusBadge";
-import { PRODUCT_LABEL, STATUS_META } from "@/lib/labels";
+import { CHECKLIST_RESULT_META, PRODUCT_LABEL, STATUS_META } from "@/lib/labels";
 import { AttachmentsAndSubmit } from "@/components/AttachmentsAndSubmit";
 import { fileUrl } from "@/lib/attachments";
 import { verifySession } from "@/lib/session";
@@ -87,17 +87,64 @@ export default async function StatusDetailPage({
               </div>
             )}
 
+            {v!.checklistResponses.length > 0 && (
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Compliance checklist notes
+                </h3>
+                <div className="mt-2 divide-y divide-slate-100">
+                  {v!.checklistResponses.map((r) => {
+                    const meta = CHECKLIST_RESULT_META[r.result];
+                    return (
+                      <div key={r.criterion_id} className="py-2.5 first:pt-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-900">{r.title}</div>
+                            <div className="mt-0.5 text-xs text-slate-500">{r.description}</div>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${meta.className}`}
+                          >
+                            {meta.label}
+                          </span>
+                        </div>
+                        {r.note && (
+                          <p className="mt-1.5 rounded-md bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
+                            {r.note}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {v!.decisions.length > 0 && (
               <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                {v!.decisions.map((d, i) => (
-                  <div key={i} className="text-sm">
-                    <span className="font-medium text-slate-900">{d.reviewer_name}</span>{" "}
-                    <span className="text-slate-500">
-                      — {STATUS_META[d.decision]?.label ?? d.decision}
-                    </span>
-                    {d.feedback && <p className="mt-1 text-slate-600">{d.feedback}</p>}
-                  </div>
-                ))}
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Reviewer feedback
+                </h3>
+                {v!.decisions.map((d, i) => {
+                  const meta = STATUS_META[d.decision] ?? { label: d.decision, className: "bg-slate-100 text-slate-700" };
+                  const borderClass =
+                    d.decision === "approved"
+                      ? "border-emerald-200 bg-emerald-50/50"
+                      : d.decision === "rejected"
+                        ? "border-rose-200 bg-rose-50/50"
+                        : "border-amber-200 bg-amber-50/50";
+                  return (
+                    <div key={i} className={`rounded-lg border p-3 ${borderClass}`}>
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <span className="font-medium text-slate-900">{d.reviewer_name}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.className}`}>
+                          {meta.label}
+                        </span>
+                      </div>
+                      {d.feedback && <p className="mt-1.5 text-sm text-slate-700">{d.feedback}</p>}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
