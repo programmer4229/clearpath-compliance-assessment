@@ -1,14 +1,19 @@
 "use client";
 
 import { useId, useState } from "react";
-import { upload } from "@vercel/blob/client";
+import { uploadPresigned } from "@vercel/blob/client";
 import { attachmentTypeFor, type UploadedAttachment } from "@/lib/attachments";
 
-// Uploads files directly from the browser to Vercel Blob (via the token
-// exchange at /api/blob-upload) instead of sending the raw bytes through a
-// Server Action. See the comment in that route for why: Vercel Functions
+// Uploads files directly from the browser to Vercel Blob (via the presigned-
+// URL exchange at /api/blob-upload) instead of sending the raw bytes through
+// a Server Action. See the comment in that route for why: Vercel Functions
 // hard-cap request bodies at 4.5MB, and that limit is enforced before app
 // code runs, so a large attachment sent the "normal" way fails silently.
+//
+// Uses uploadPresigned() (OIDC-based), not upload() — this project's Blob
+// store connection only provisions BLOB_STORE_ID + BLOB_WEBHOOK_PUBLIC_KEY,
+// not a static BLOB_READ_WRITE_TOKEN, so the older handleUpload()/upload()
+// pair fails with "Failed to retrieve the client token" every time.
 //
 // Uploaded with access: "private" to match this app's Blob store, which
 // means the returned URL isn't directly browsable — see src/lib/attachments.ts
@@ -45,7 +50,7 @@ export function AttachmentPicker({
       for (const file of selected) {
         const type = attachmentTypeFor(file.type);
         if (!type) continue; // e.g. video — out of scope for this MVP, see PRD
-        const blob = await upload(file.name, file, {
+        const blob = await uploadPresigned(file.name, file, {
           access: "private",
           handleUploadUrl: "/api/blob-upload",
         });
